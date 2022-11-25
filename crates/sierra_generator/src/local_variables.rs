@@ -50,26 +50,18 @@ fn inner_find_local_variables(
         // All the input variables should be available.
         state.use_variables(&statement.inputs(), res);
 
-        match statement {
+        let concrete_function_id = match statement {
             lowering::Statement::Literal(statement_literal) => {
                 // Treat literal as a temporary variable.
                 state.set_variable_status(
                     statement_literal.output,
                     VariableStatus::TemporaryVariable,
                 );
+
+                continue; // TODO
             }
             lowering::Statement::Call(statement_call) => {
-                let (_, concrete_function_id) =
-                    get_concrete_libfunc_id(db, statement_call.function);
-
-                handle_function_call(
-                    db,
-                    &mut state,
-                    &mut known_ap_change,
-                    concrete_function_id,
-                    &statement_call.inputs,
-                    &statement_call.outputs,
-                );
+                get_concrete_libfunc_id(db, statement_call.function).1
             }
             lowering::Statement::CallBlock(statement_call_block) => {
                 let block_known_ap_change = inner_find_local_variables(
@@ -84,52 +76,11 @@ fn inner_find_local_variables(
                     known_ap_change = false;
                 }
                 state.mark_outputs_as_temporary(statement);
+
+                continue;
             }
             lowering::Statement::MatchExtern(statement_match_extern) => {
-                // The number of branches that continue to the next statement after the match.
-                let mut reachable_branches: usize = 0;
-                // Is the ap change known after all of the branches.
-                let mut reachable_branches_known_ap_change: bool = true;
-
-                let (_, concrete_function_id) =
-                    get_concrete_libfunc_id(db, statement_match_extern.function);
-                let libfunc_signature = get_libfunc_signature(db, concrete_function_id);
-                for (block_id, branch_signature) in
-                    zip_eq(&statement_match_extern.arms, libfunc_signature.branch_signatures)
-                {
-                    let mut state_clone = state.clone();
-
-                    state_clone.register_outputs(
-                        &statement_match_extern.inputs,
-                        &lowered_function.blocks[*block_id].inputs,
-                        &branch_signature.vars,
-                    );
-
-                    let inner_known_ap_change = inner_find_local_variables(
-                        db,
-                        lowered_function,
-                        *block_id,
-                        state_clone,
-                        res,
-                    )?;
-
-                    // Update reachable_branches and reachable_branches_known_ap_change.
-                    if let lowering::BlockEnd::Callsite(_) = lowered_function.blocks[*block_id].end
-                    {
-                        reachable_branches += 1;
-                        if !inner_known_ap_change {
-                            reachable_branches_known_ap_change = false;
-                        }
-                    }
-                }
-
-                // If there is more than one branch that reaches this point, or ap change is unknown
-                // for at least one of them, revoke the temporary variables.
-                if reachable_branches > 1 || !reachable_branches_known_ap_change {
-                    state.revoke_temporary_variables();
-                    known_ap_change = false;
-                }
-                state.mark_outputs_as_temporary(statement);
+                get_concrete_libfunc_id(db, statement_match_extern.function).1
             }
             lowering::Statement::MatchEnum(statement_match_enum) => {
                 // TODO(lior): Remove code duplication with [lowering::Statement::MatchExtern].
@@ -169,47 +120,66 @@ fn inner_find_local_variables(
                     known_ap_change = false;
                 }
                 state.mark_outputs_as_temporary(statement);
+
+                continue; // TODO
             }
             lowering::Statement::StructConstruct(statement_struct_construct) => {
                 let ty = db.get_concrete_type_id(
                     lowered_function.variables[statement_struct_construct.output].ty,
                 )?;
-                handle_function_call(
-                    db,
-                    &mut state,
-                    &mut known_ap_change,
-                    struct_construct_libfunc_id(db, ty),
-                    &statement_struct_construct.inputs,
-                    &[statement_struct_construct.output],
-                );
+
+                struct_construct_libfunc_id(db, ty)
             }
             lowering::Statement::StructDestructure(statement_struct_destructure) => {
                 let ty = db.get_concrete_type_id(
                     lowered_function.variables[statement_struct_destructure.input].ty,
                 )?;
-                handle_function_call(
-                    db,
-                    &mut state,
-                    &mut known_ap_change,
-                    struct_deconstruct_libfunc_id(db, ty),
-                    &[statement_struct_destructure.input],
-                    &statement_struct_destructure.outputs,
-                );
+                struct_deconstruct_libfunc_id(db, ty)
             }
             lowering::Statement::EnumConstruct(statement_enum_construct) => {
                 let ty = db.get_concrete_type_id(
                     lowered_function.variables[statement_enum_construct.output].ty,
                 )?;
-                handle_function_call(
-                    db,
-                    &mut state,
-                    &mut known_ap_change,
-                    enum_init_libfunc_id(db, ty, statement_enum_construct.variant.idx),
-                    &[statement_enum_construct.input],
-                    &[statement_enum_construct.output],
-                );
+                enum_init_libfunc_id(db, ty, statement_enum_construct.variant.idx)
+            }
+        };
+
+        // The number of branches that continue to the next statement after the match.
+        let mut reachable_branches: usize = 0;
+        // Is the ap change known after all of the branches.
+        let mut reachable_branches_known_ap_change: bool = true;
+
+        let libfunc_signature = get_libfunc_signature(db, concrete_function_id);
+        for (block_id, branch_signature) in
+            zip_eq(&statement_match_extern.arms, libfunc_signature.branch_signatures)
+        {
+            let mut state_clone = state.clone();
+
+            state_clone.register_outputs(
+                &statement_match_extern.inputs,
+                &lowered_function.blocks[*block_id].inputs,
+                &branch_signature.vars,
+            );
+
+            let inner_known_ap_change =
+                inner_find_local_variables(db, lowered_function, *block_id, state_clone, res)?;
+
+            // Update reachable_branches and reachable_branches_known_ap_change.
+            if let lowering::BlockEnd::Callsite(_) = lowered_function.blocks[*block_id].end {
+                reachable_branches += 1;
+                if !inner_known_ap_change {
+                    reachable_branches_known_ap_change = false;
+                }
             }
         }
+
+        // If there is more than one branch that reaches this point, or ap change is unknown
+        // for at least one of them, revoke the temporary variables.
+        if reachable_branches > 1 || !reachable_branches_known_ap_change {
+            state.revoke_temporary_variables();
+            known_ap_change = false;
+        }
+        state.mark_outputs_as_temporary(statement);
     }
 
     // TODO(lior): Handle block.drops.
