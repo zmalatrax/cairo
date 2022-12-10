@@ -44,6 +44,8 @@ define_libfunc_hierarchy! {
         LessThanOrEqual(Uint128LessThanOrEqualLibFunc),
         Const(Uint128ConstLibFunc),
         FromFelt(Uint128sFromFeltLibFunc),
+        // TODO(lior): Rename FromFeltNew to FromFelt, after renaming FromFelt to SplitFelt.
+        FromFeltNew(Uint128FromFeltNewLibFunc),
         ToFelt(Uint128ToFeltLibFunc),
         JumpNotZero(Uint128JumpNotZeroLibFunc),
     }, Uint128Concrete
@@ -499,6 +501,54 @@ impl NoGenericArgsGenericLibFunc for Uint128sFromFeltLibFunc {
                         },
                     ],
                     ap_change: SierraApChange::Known(6),
+                },
+            ],
+            fallthrough: Some(0),
+        })
+    }
+}
+
+/// LibFunc for converting a felt into a uint128.
+#[derive(Default)]
+pub struct Uint128FromFeltNewLibFunc {}
+impl NoGenericArgsGenericLibFunc for Uint128FromFeltNewLibFunc {
+    // TODO(lior): Rename uint128_from_felt_new to uint128_from_felt.
+    const ID: GenericLibFuncId = GenericLibFuncId::new_inline("uint128_from_felt_new");
+
+    fn specialize_signature(
+        &self,
+        context: &dyn SignatureSpecializationContext,
+    ) -> Result<LibFuncSignature, SpecializationError> {
+        let range_check_type = context.get_concrete_type(RangeCheckType::id(), &[])?;
+        Ok(LibFuncSignature {
+            param_signatures: vec![
+                ParamSignature::new(range_check_type.clone()),
+                ParamSignature::new(context.get_concrete_type(FeltType::id(), &[])?),
+            ],
+            branch_signatures: vec![
+                BranchSignature {
+                    vars: vec![
+                        OutputVarInfo {
+                            ty: range_check_type.clone(),
+                            ref_info: OutputVarReferenceInfo::Deferred(
+                                DeferredOutputKind::AddConst { param_idx: 0 },
+                            ),
+                        },
+                        OutputVarInfo {
+                            ty: context.get_concrete_type(Uint128Type::id(), &[])?,
+                            ref_info: OutputVarReferenceInfo::SameAsParam { param_idx: 1 },
+                        },
+                    ],
+                    ap_change: SierraApChange::Known(1),
+                },
+                BranchSignature {
+                    vars: vec![OutputVarInfo {
+                        ty: range_check_type,
+                        ref_info: OutputVarReferenceInfo::Deferred(DeferredOutputKind::AddConst {
+                            param_idx: 0,
+                        }),
+                    }],
+                    ap_change: SierraApChange::Known(6), // TODO(lior): Fix
                 },
             ],
             fallthrough: Some(0),

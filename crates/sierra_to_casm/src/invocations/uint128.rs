@@ -303,6 +303,156 @@ fn build_uint128_from_felt(
     }
 }
 
+/// Handles a casting a felt into u128.
+fn build_uint128_from_felt_new(
+    builder: CompiledInvocationBuilder<'_>,
+) -> Result<CompiledInvocation, InvocationError> {
+    let (range_check, value_cell) = match builder.refs {
+        [
+            ReferenceValue { expression: range_check_expression, .. },
+            ReferenceValue { expression: expr_value, .. },
+        ] => (
+            try_unpack_deref(range_check_expression)?,
+            expr_value
+                .try_unpack_single()
+                .map_err(|_| InvocationError::InvalidReferenceExpressionForArgument)?,
+        ),
+        refs => {
+            return Err(InvocationError::WrongNumberOfArguments {
+                expected: 2,
+                actual: refs.len(),
+            });
+        }
+    };
+    let failure_handle_statement_id = get_bool_comparison_target_statement_id(&builder);
+    let uint128_bound: BigInt = BigInt::from(u128::MAX) + 1; // = 2**128.
+    const A: i128 = 10633823966279327296825105735305134079_i128;
+    const B: i128 = 10633823966279327296825105735305134080_i128;
+    match value_cell {
+        CellExpression::Deref(value) => {
+            // The code up to the success branch.
+            let mut before_success_branch = casm! {
+                %{ memory[ap + 0] = memory value < (uint128_bound.clone()) %}
+                jmp rel 0 if [ap + 0] != 0, ap++; // Jump to success branch. Address updated later.
+                // We show that the number is in the range [2**128, PRIME) by writing it as:
+                //   A * x + y + 2**128,
+                // where:
+                //   * A = (PRIME - 2**128) // (2**128 - 1).
+                //   * B = (PRIME - 2**128) % (2**128 - 1).
+                //   * x is in the range [0, 2**128),
+                //   * y is in the range [0, B):
+                //     * y is in the range [0, 2**128).
+                //     * y + 2**128 - B is in the range [0, 2**128).
+                //
+                // Note that the minimal possible value of the expression A * x + y + 2**128 is
+                // min_val=2**128 (where x = y = 0),
+                // and the maximal value is obtained where x = 2**128 - 1 and y = B - 1:
+                //   max_val = (A * (2**128 - 1) + B) - 1 + 2**128 =
+                //     (PRIME - 2**128) - 1 + 2**128 = PRIME - 1.
+                //
+                // As long as A <= B, every number in the range can be represented.
+                // TODO(lior): Fix hint.
+                // %{ (memory[ap + 0], memory[ap + 1]) = divmod(
+                //     memory (value.unchecked_apply_known_ap_change(1)) - uint128_bound,
+                //     A
+                // ) if memory (value.unchecked_apply_known_ap_change(1)) != PRIME - 1 else
+                //     (2**128 - 1, B - 1)
+                // %}
+                %{ (memory[ap + 0], memory[ap + 1]) = divmod(
+                    memory (value.unchecked_apply_known_ap_change(1)),
+                    (uint128_bound.clone())
+                ) %}
+                // Guess x and check 0 <= x < 2**128.
+                [ap] = [[(range_check.unchecked_apply_known_ap_change(1))]], ap++;
+                // Guess y and check 0 <= x < 2**128.
+                [ap] = [[(range_check.unchecked_apply_known_ap_change(2))] + 1], ap++;
+                // Check y < B.
+                [ap] = [ap - 1] + uint128_bound, ap++;
+                [ap] = [ap - 1] + (-B), ap++;
+                [ap - 1] = [[(range_check.unchecked_apply_known_ap_change(5))] + 2];
+                // Compute A * x.
+                [ap] = [ap - 4] * A, ap++;
+                // Check value = A * x + y + 2**128.
+                (value.unchecked_apply_known_ap_change(6)) = [ap - 1] + [ap - 3];
+                jmp rel 0; // Fixed in relocations.
+            };
+            patch_jnz_to_end(&mut before_success_branch, 0);
+            let relocation_index = before_success_branch.instructions.len() - 1;
+            let success_branch = casm! {
+                // No overflow:
+                value = [[(range_check.unchecked_apply_known_ap_change(1))]];
+            };
+
+            Ok(builder.build(
+                chain!(before_success_branch.instructions, success_branch.instructions).collect(),
+                vec![RelocationEntry {
+                    instruction_idx: relocation_index,
+                    relocation: Relocation::RelativeStatementId(failure_handle_statement_id),
+                }],
+                [
+                    vec![
+                        ReferenceExpression::from_cell(CellExpression::BinOp(BinOpExpression {
+                            op: FeltOperator::Add,
+                            a: range_check.unchecked_apply_known_ap_change(1),
+                            b: DerefOrImmediate::Immediate(BigInt::from(1)),
+                        })),
+                        ReferenceExpression::from_cell(CellExpression::Deref(
+                            value.unchecked_apply_known_ap_change(1),
+                        )),
+                    ]
+                    .into_iter(),
+                    vec![ReferenceExpression::from_cell(CellExpression::BinOp(BinOpExpression {
+                        op: FeltOperator::Add,
+                        a: range_check.unchecked_apply_known_ap_change(6),
+                        b: DerefOrImmediate::Immediate(BigInt::from(3)),
+                    }))]
+                    .into_iter(),
+                ]
+                .into_iter(),
+            ))
+        }
+        CellExpression::Immediate(value) => {
+            let output_expressions = [
+                vec![
+                    ReferenceExpression::from_cell(CellExpression::Deref(
+                        range_check.unchecked_apply_known_ap_change(1),
+                    )),
+                    ReferenceExpression::from_cell(CellExpression::Immediate(value.clone())),
+                ]
+                .into_iter(),
+                vec![
+                    ReferenceExpression::from_cell(CellExpression::Deref(
+                        range_check.unchecked_apply_known_ap_change(5),
+                    )),
+                    ReferenceExpression::from_cell(CellExpression::Deref(ap_cell_ref(-4))),
+                    ReferenceExpression::from_cell(CellExpression::Deref(ap_cell_ref(-3))),
+                ]
+                .into_iter(),
+            ]
+            .into_iter();
+
+            Ok(if value >= BigInt::from(0) && value < uint128_bound {
+                builder.build(casm! { ap += 1; }.instructions, vec![], output_expressions)
+            } else {
+                builder.build(
+                    casm! {
+                    [ap + 1] = (value.clone() / uint128_bound.clone());
+                    [ap + 2] = (value % uint128_bound);
+                    ap += 5;
+                    jmp rel 0; }
+                    .instructions,
+                    vec![RelocationEntry {
+                        instruction_idx: 3,
+                        relocation: Relocation::RelativeStatementId(failure_handle_statement_id),
+                    }],
+                    output_expressions,
+                )
+            })
+        }
+        _ => Err(InvocationError::InvalidReferenceExpressionForArgument),
+    }
+}
+
 fn build_uint128_lt(
     builder: CompiledInvocationBuilder<'_>,
 ) -> Result<CompiledInvocation, InvocationError> {
