@@ -662,12 +662,12 @@ impl<'a> Parser<'a> {
 
     /// Assumes the current token is LParen.
     /// Expected pattern: `\(<ExprList>\)`
-    fn expect_expression_list_parenthesized(&mut self) -> ExprListParenthesizedGreen {
+    fn expect_parenthesized_argument_list(&mut self) -> ExprListParenthesizedGreen {
         let lparen = self.take::<TerminalLParen>();
         let expression_list = ExprList::new_green(
             self.db,
             self.parse_separated_list::<Expr, TerminalComma, ExprListElementOrSeparatorGreen>(
-                Self::try_parse_expr,
+                Self::parse_function_argument,
                 is_of_kind!(rparen, block, rbrace, top_level),
                 "expression",
             ),
@@ -697,8 +697,27 @@ impl<'a> Parser<'a> {
     /// Expected pattern: `<ExprListParenthesized>`
     fn expect_function_call(&mut self, path: ExprPathGreen) -> ExprFunctionCallGreen {
         let func_name = path;
-        let parenthesized_args = self.expect_expression_list_parenthesized();
+        let parenthesized_args = self.expect_parenthesized_argument_list();
         ExprFunctionCall::new_green(self.db, func_name, parenthesized_args)
+    }
+
+    /// Returns a GreenId of a node with an Expr.* kind (see [cairo_syntax::node::ast::Expr]) or
+    /// None if an expression can't be parsed.
+    fn parse_function_argument(&mut self) -> Option<ExprGreen> {
+        let expr_or_argname = self.try_parse_expr()?;
+        println!("{expr_or_argname:?} {:?}", self.peek().kind);
+        if self.peek().kind == SyntaxKind::TerminalColon {
+            let _colon = self.take_raw();
+            let offset = self.offset as usize;
+            self.diagnostics.add(ParserDiagnostic {
+                file_id: self.file_id,
+                kind: ParserDiagnosticKind::NamedArgsAreNotSupported,
+                span: TextSpan { start: TextOffset(offset), end: TextOffset(offset + 1) },
+            });
+            self.try_parse_expr()
+        } else {
+            Some(expr_or_argname)
+        }
     }
 
     /// Assumes the current token is LBrace.
