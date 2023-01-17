@@ -146,11 +146,100 @@ fn parse_inline_attribute(
 pub struct FunctionInlinerRewriter<'db> {
     /// The LoweringContext were we are building the new blocks.
     ctx: LoweringContext<'db>,
-
+    block_queue: BlockQueue,
+}
+pub struct BlockQueue {
     /// A Queue of structured blocks on which we want to apply the FunctionInlinerRewriter.
     block_queue: VecDeque<FlatBlock>,
-
     flat_blocks: FlatBlocks,
+}
+impl BlockQueue {
+    /// Enqueue the block for processing and return the block_id that this
+    /// block is going to get in self.ctx.blocks.
+    fn enqueue_block(&mut self, block: FlatBlock) -> BlockId {
+        self.block_queue.push_back(block);
+        BlockId(self.flat_blocks.len() + self.block_queue.len())
+    }
+    fn dequeue(&mut self) -> Option<FlatBlock> {
+        self.block_queue.pop_front()
+    }
+    fn finalize(&mut self, block: FlatBlock) -> BlockId {
+        self.flat_blocks.alloc(block)
+    }
+}
+pub struct Mapper<'a, 'b> {
+    ctx: &'a mut LoweringContext<'b>,
+    lowered: &'a FlatLowered,
+    renamed_vars: HashMap<VariableId, VariableId>,
+    renamed_blocks: HashMap<BlockId, BlockId>,
+}
+impl<'a, 'b> Mapper<'a, 'b> {
+    pub fn rename_var(&mut self, old_var_id: &VariableId) -> VariableId {
+        *self
+            .renamed_vars
+            .entry(*old_var_id)
+            .or_insert_with(|| self.ctx.new_var(self.lowered.variables[*old_var_id].ty))
+    }
+    // Rebuilds the statement with renamed var and block ids.
+    fn rebuild_statement(&mut self, statement: &Statement) -> Statement {
+        match statement {
+            Statement::Literal(stmt) => Statement::Literal(StatementLiteral {
+                value: stmt.value.clone(),
+                output: self.rename_var(&stmt.output),
+            }),
+            Statement::Call(stmt) => Statement::Call(StatementCall {
+                function: stmt.function,
+                inputs: stmt.inputs.iter().map(|v| self.rename_var(v)).collect(),
+                outputs: stmt.outputs.iter().map(|v| self.rename_var(v)).collect(),
+            }),
+
+            Statement::CallBlock(stmt) => Statement::CallBlock(StatementCallBlock {
+                block: stmt.block,
+                outputs: stmt.outputs.iter().map(|v| self.rename_var(v)).collect(),
+            }),
+            Statement::MatchExtern(stmt) => Statement::MatchExtern(StatementMatchExtern {
+                function: stmt.function,
+                inputs: stmt.inputs.iter().map(|v| self.rename_var(v)).collect(),
+                arms: stmt
+                    .arms
+                    .iter()
+                    .map(|(concrete_variant, block_id)| {
+                        (concrete_variant.clone(), self.renamed_blocks[block_id])
+                    })
+                    .collect(),
+                outputs: stmt.outputs.iter().map(|v| self.rename_var(v)).collect(),
+            }),
+            Statement::StructConstruct(stmt) => {
+                Statement::StructConstruct(StatementStructConstruct {
+                    inputs: stmt.inputs.iter().map(|v| self.rename_var(v)).collect(),
+                    output: self.rename_var(&stmt.output),
+                })
+            }
+            Statement::StructDestructure(stmt) => {
+                Statement::StructDestructure(StatementStructDestructure {
+                    input: self.rename_var(&stmt.input),
+                    outputs: stmt.outputs.iter().map(|v| self.rename_var(v)).collect(),
+                })
+            }
+            Statement::EnumConstruct(stmt) => Statement::EnumConstruct(StatementEnumConstruct {
+                variant: stmt.variant.clone(),
+                input: self.rename_var(&stmt.input),
+                output: self.rename_var(&stmt.output),
+            }),
+            Statement::MatchEnum(stmt) => Statement::MatchEnum(StatementMatchEnum {
+                concrete_enum: stmt.concrete_enum,
+                input: self.rename_var(&stmt.input),
+                arms: stmt
+                    .arms
+                    .iter()
+                    .map(|(concrete_variant, block_id)| {
+                        (concrete_variant.clone(), self.renamed_blocks[block_id])
+                    })
+                    .collect(),
+                outputs: stmt.outputs.iter().map(|v| self.rename_var(v)).collect(),
+            }),
+        }
+    }
 }
 
 impl<'db> FunctionInlinerRewriter<'db> {
@@ -174,13 +263,6 @@ impl<'db> FunctionInlinerRewriter<'db> {
         Ok(statement.clone())
     }
 
-    /// Enqueue the block for processing and return the block_id that this
-    /// block is going to get in self.ctx.blocks.
-    fn enqueue_block(&mut self, block: FlatBlock) -> BlockId {
-        self.block_queue.push_back(block);
-        BlockId(self.flat_blocks.len() + self.block_queue.len())
-    }
-
     /// Inlines the given function, with the given input variables.
     ///
     /// Returns the block_id that should be called instead of the function.
@@ -197,33 +279,32 @@ impl<'db> FunctionInlinerRewriter<'db> {
         // we are inlining.
 
         // The input variables need to be renamed to match the inputs to the function call.
-        let mut renamed_vars = HashMap::<VariableId, VariableId>::from_iter(izip!(
-            lowered.blocks[root_block_id].inputs.iter().cloned(),
-            inputs.iter().cloned()
-        ));
-        let mut renamed_blocks = HashMap::new();
+        let mut mapper = Mapper {
+            ctx: &mut self.ctx,
+            lowered: &lowered,
+            renamed_vars: HashMap::<VariableId, VariableId>::from_iter(izip!(
+                lowered.blocks[root_block_id].inputs.iter().cloned(),
+                inputs.iter().cloned()
+            )),
+            renamed_blocks: HashMap::new(),
+        };
         for (block_id, block) in lowered.blocks.iter() {
             let mut statements = vec![];
 
-            let mut rename_var = |old_var_id: &VariableId| {
-                *renamed_vars
-                    .entry(*old_var_id)
-                    .or_insert_with(|| self.ctx.new_var(lowered.variables[*old_var_id].ty))
-            };
             for stmt in &block.statements {
-                statements.push(rebuild_statement(stmt, &mut rename_var, &renamed_blocks));
+                statements.push(mapper.rebuild_statement(stmt));
             }
 
             let end = match &block.end {
                 FlatBlockEnd::Callsite(outputs) => {
-                    FlatBlockEnd::Callsite(outputs.iter().map(&mut rename_var).collect())
+                    FlatBlockEnd::Callsite(outputs.iter().map(|v| mapper.rename_var(v)).collect())
                 }
                 FlatBlockEnd::Return(returns) => {
                     if block_id != root_block_id {
                         panic!("Cannot inline a function an early return.");
                     }
 
-                    FlatBlockEnd::Callsite(returns.iter().map(&mut rename_var).collect())
+                    FlatBlockEnd::Callsite(returns.iter().map(|v| mapper.rename_var(v)).collect())
                 }
                 FlatBlockEnd::Unreachable => FlatBlockEnd::Unreachable,
             };
@@ -233,14 +314,14 @@ impl<'db> FunctionInlinerRewriter<'db> {
                 // taken from the caller rather then created in this block.
                 vec![]
             } else {
-                block.inputs.iter().map(&mut rename_var).collect()
+                block.inputs.iter().map(|v| mapper.rename_var(v)).collect()
             };
 
             let new_block = FlatBlock { inputs, statements, end };
-            renamed_blocks.insert(block_id, self.enqueue_block(new_block));
+            mapper.renamed_blocks.insert(block_id, self.block_queue.enqueue_block(new_block));
         }
 
-        Ok(renamed_blocks[&root_block_id])
+        Ok(mapper.renamed_blocks[&root_block_id])
     }
 
     fn apply(
@@ -250,19 +331,21 @@ impl<'db> FunctionInlinerRewriter<'db> {
         let orig_root = flat_lower.root?;
         let mut rewriter = Self {
             ctx: lowering_info.ctx()?,
-            block_queue: VecDeque::from(flat_lower.blocks.0.clone()),
-            flat_blocks: FlatBlocks::new(),
+            block_queue: BlockQueue {
+                block_queue: VecDeque::from(flat_lower.blocks.0.clone()),
+                flat_blocks: FlatBlocks::new(),
+            },
         };
 
         rewriter.ctx.variables = flat_lower.variables.clone();
-        while let Some(block) = rewriter.block_queue.pop_front() {
+        while let Some(block) = rewriter.block_queue.dequeue() {
             let mut statements = vec![];
             for stmt in &block.statements {
                 if let Ok(stmt) = rewriter.rewrite(stmt) {
                     statements.push(stmt);
                 }
             }
-            rewriter.flat_blocks.alloc(FlatBlock {
+            rewriter.block_queue.finalize(FlatBlock {
                 inputs: block.inputs.clone(),
                 statements,
                 end: block.end.clone(),
@@ -276,7 +359,7 @@ impl<'db> FunctionInlinerRewriter<'db> {
             diagnostics: flat_lower.diagnostics.clone(),
             root: Ok(orig_root),
             variables: rewriter.ctx.variables,
-            blocks: rewriter.flat_blocks,
+            blocks: rewriter.block_queue.flat_blocks,
         })
     }
 }
@@ -288,70 +371,4 @@ pub fn apply_inlining(
 ) -> Maybe<FlatLowered> {
     let lowering_info = LoweringContextBuilder::new(db, function_id)?;
     FunctionInlinerRewriter::apply(&lowering_info, flat_lower)
-}
-
-// Rebuilds the statement with renamed var and block ids.
-fn rebuild_statement<F>(
-    statement: &Statement,
-    mut rename_var: F,
-    renamed_blocks: &HashMap<BlockId, BlockId>,
-) -> Statement
-where
-    F: FnMut(&VariableId) -> VariableId,
-{
-    match statement {
-        Statement::Literal(stmt) => Statement::Literal(StatementLiteral {
-            value: stmt.value.clone(),
-            output: rename_var(&stmt.output),
-        }),
-        Statement::Call(stmt) => Statement::Call(StatementCall {
-            function: stmt.function,
-            inputs: stmt.inputs.iter().map(&mut rename_var).collect(),
-            outputs: stmt.outputs.iter().map(&mut rename_var).collect(),
-        }),
-
-        Statement::CallBlock(stmt) => Statement::CallBlock(StatementCallBlock {
-            block: stmt.block,
-            outputs: stmt.outputs.iter().map(&mut rename_var).collect(),
-        }),
-        Statement::MatchExtern(stmt) => Statement::MatchExtern(StatementMatchExtern {
-            function: stmt.function,
-            inputs: stmt.inputs.iter().map(&mut rename_var).collect(),
-            arms: stmt
-                .arms
-                .iter()
-                .map(|(concrete_variant, block_id)| {
-                    (concrete_variant.clone(), renamed_blocks[block_id])
-                })
-                .collect(),
-            outputs: stmt.outputs.iter().map(&mut rename_var).collect(),
-        }),
-        Statement::StructConstruct(stmt) => Statement::StructConstruct(StatementStructConstruct {
-            inputs: stmt.inputs.iter().map(&mut rename_var).collect(),
-            output: rename_var(&stmt.output),
-        }),
-        Statement::StructDestructure(stmt) => {
-            Statement::StructDestructure(StatementStructDestructure {
-                input: rename_var(&stmt.input),
-                outputs: stmt.outputs.iter().map(&mut rename_var).collect(),
-            })
-        }
-        Statement::EnumConstruct(stmt) => Statement::EnumConstruct(StatementEnumConstruct {
-            variant: stmt.variant.clone(),
-            input: rename_var(&stmt.input),
-            output: rename_var(&stmt.output),
-        }),
-        Statement::MatchEnum(stmt) => Statement::MatchEnum(StatementMatchEnum {
-            concrete_enum: stmt.concrete_enum,
-            input: rename_var(&stmt.input),
-            arms: stmt
-                .arms
-                .iter()
-                .map(|(concrete_variant, block_id)| {
-                    (concrete_variant.clone(), renamed_blocks[block_id])
-                })
-                .collect(),
-            outputs: stmt.outputs.iter().map(&mut rename_var).collect(),
-        }),
-    }
 }
