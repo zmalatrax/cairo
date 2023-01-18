@@ -26,7 +26,7 @@ use crate::{Statement, StatementMatchExtern, VariableId};
 pub struct LoweringContextBuilder<'db> {
     pub db: &'db dyn LoweringGroup,
     pub function_id: FunctionWithBodyId,
-    pub function_def: Arc<semantic::items::function_with_body::FunctionBody>,
+    pub function_body: Arc<semantic::items::function_with_body::FunctionBody>,
     /// Semantic signature for current function.
     pub signature: semantic::Signature,
     // TODO(spapini): Document. (excluding implicits).
@@ -48,7 +48,7 @@ impl<'db> LoweringContextBuilder<'db> {
         Ok(LoweringContextBuilder {
             db,
             function_id,
-            function_def,
+            function_body: function_def,
             signature,
             ref_params,
             implicits,
@@ -59,7 +59,7 @@ impl<'db> LoweringContextBuilder<'db> {
         Ok(LoweringContext {
             db: self.db,
             function_id: self.function_id,
-            function_body: &self.function_def,
+            function_body: &self.function_body,
             signature: &self.signature,
             diagnostics: LoweringDiagnostics::new(self.function_id.module_file(self.db.upcast())),
             variables: Arena::default(),

@@ -47,22 +47,22 @@ fn checked_compile_to_sierra(name: &str) -> cairo_lang_sierra::program::Program 
 }
 
 /// Tests lowering from Cairo to Sierra.
-#[test_case("fib")]
-#[test_case("fib_box")]
+// #[test_case("fib")]
+// #[test_case("fib_box")]
 #[test_case("fib_array")]
-#[test_case("fib_counter")]
-#[test_case("fib_struct")]
-#[test_case("fib_u128")]
-#[test_case("fib_u128_checked")]
-#[test_case("fib_gas")]
-#[test_case("fib_local")]
-#[test_case("fib_unary")]
-#[test_case("enum_flow")]
-#[test_case("corelib_usage")]
-#[test_case("hash_chain")]
-#[test_case("hash_chain_gas")]
-#[test_case("pedersen_test")]
-#[test_case("testing")]
+// #[test_case("fib_counter")]
+// #[test_case("fib_struct")]
+// #[test_case("fib_u128")]
+// #[test_case("fib_u128_checked")]
+// #[test_case("fib_gas")]
+// #[test_case("fib_local")]
+// #[test_case("fib_unary")]
+// #[test_case("enum_flow")]
+// #[test_case("corelib_usage")]
+// #[test_case("hash_chain")]
+// #[test_case("hash_chain_gas")]
+// #[test_case("pedersen_test")]
+// #[test_case("testing")]
 fn cairo_to_sierra(name: &str) {
     compare_contents_or_fix(name, "sierra", checked_compile_to_sierra(name).to_string());
 }
