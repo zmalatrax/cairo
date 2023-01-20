@@ -156,8 +156,11 @@ mod ec;
 use ec::EcOp;
 use ec::EcPoint;
 use ec::EcState;
+use ec::OptionEcPointCopy;
+use ec::ec_add;
 use ec::ec_mul;
 use ec::ec_neg;
+use ec::ec_sub;
 use ec::ec_point_from_x;
 use ec::ec_point_new;
 use ec::ec_point_try_new;
@@ -167,6 +170,8 @@ use ec::ec_state_add;
 use ec::ec_state_finalize_nonzero;
 use ec::ec_state_finalize;
 use ec::ec_state_init;
+
+mod ecdsa;
 
 // Integer.
 mod integer;
