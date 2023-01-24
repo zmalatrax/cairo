@@ -67,6 +67,9 @@ fn check_ecdsa_signature(
     let zG: Option::<EcPoint> = ec_mul(gen_point, message_hash);
     let rQ: Option::<EcPoint> = ec_mul(public_key_point, signature_r);
     let sR: Option::<EcPoint> = ec_mul(signature_r_point, signature_s);
+    let (x_, y_) = ec_point_unwrap(option_unwrap::<EcPoint>(sR));
+    debug::print_felt('sR.x')
+    debug::print_felt(x_)
 
     let sR_x = match sR {
         Option::Some(pt) => {
@@ -76,10 +79,26 @@ fn check_ecdsa_signature(
         Option::None(()) => { return false; },
     };
 
+    debug::print_felt('zG.x')
+    let (x_, y_) = ec_point_unwrap(option_unwrap::<EcPoint>(zG));
+    debug::print_felt(x_)
+    let (x_, y_) = ec_point_unwrap(option_unwrap::<EcPoint>(rQ));
+    debug::print_felt(x_)
+    let (x_, y_) = ec_point_unwrap(signature_r_point);
+    debug::print_felt('signature_r_point.x')
+    debug::print_felt(x_)
+    debug::print_felt('signature_r_point.y')
+    debug::print_felt(y_)
+    debug::print_felt('signature_s')
+    debug::print_felt(signature_s)
+    debug::print_felt('signature_r')
+    debug::print_felt(signature_r)
     let candidate: Option::<EcPoint> = ec_add(zG, rQ);
     match candidate {
         Option::Some(pt) => {
+            debug::print_felt('HERE')
             let (x, y) = ec_point_unwrap(pt);
+            debug::print_felt(x)
             if (x == sR_x) {
                 return true;
             }
@@ -90,7 +109,9 @@ fn check_ecdsa_signature(
     let candidate2: Option::<EcPoint> = ec_sub(zG, rQ);
     match candidate2 {
         Option::Some(pt) => {
+            debug::print_felt('HERE')
             let (x, y) = ec_point_unwrap(pt);
+            debug::print_felt(x)
             if (x == sR_x) {
                 return true;
             }
