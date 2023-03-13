@@ -61,7 +61,7 @@ pub fn core_libfunc_ap_change<InfoProvider: InvocationApChangeInfoProvider>(
                     .to_vec()
             }
             ArrayConcreteLibfunc::Len(libfunc) => {
-                vec![ApChange::Known(usize::from(info_provider.type_size(&libfunc.ty) != 1))]
+                vec![ApChange::Known(if info_provider.type_size(&libfunc.ty) == 1 { 0 } else { 1 })]
             }
         },
         CoreConcreteLibfunc::Bitwise(_) => vec![ApChange::Known(0)],

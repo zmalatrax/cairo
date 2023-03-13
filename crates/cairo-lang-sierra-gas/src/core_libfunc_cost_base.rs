@@ -230,6 +230,7 @@ pub fn core_libfunc_postcost<Ops: CostOperations, InfoProvider: InvocationCostIn
         }
         Array(ArrayConcreteLibfunc::New(_)) => vec![ops.steps(1)],
         Array(ArrayConcreteLibfunc::Append(libfunc)) => {
+            // TODO: try_into().unwrap()
             vec![ops.steps(info_provider.type_size(&libfunc.ty) as i32)]
         }
 
@@ -262,7 +263,10 @@ pub fn core_libfunc_postcost<Ops: CostOperations, InfoProvider: InvocationCostIn
         }
         Box(libfunc) => match libfunc {
             BoxConcreteLibfunc::Into(libfunc) => {
-                vec![ops.steps(1.max(info_provider.type_size(&libfunc.ty).try_into().unwrap()))]
+                vec![ops.steps(std::cmp::max(
+                    1,
+                    info_provider.type_size(&libfunc.ty).try_into().unwrap(),
+                ))]
             }
             BoxConcreteLibfunc::Unbox(_) => vec![ops.steps(0)],
         },

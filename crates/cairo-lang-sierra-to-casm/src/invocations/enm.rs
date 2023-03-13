@@ -97,6 +97,7 @@ fn build_enum_init(
         .get(&builder.libfunc.param_signatures()[0].ty)
         .ok_or(InvocationError::UnknownTypeData)?
         .to_owned();
+    // TODO(spapini): Is this necessary
     if init_arg_cells.len() != variant_size as usize {
         return Err(InvocationError::InvalidReferenceExpressionForArgument);
     }
@@ -129,6 +130,7 @@ fn build_enum_match(
         .map_err(|_| InvocationError::InvalidReferenceExpressionForArgument)?;
     // Verify variant_selector is of type deref. This is the case with an enum_value
     // that was validly created and then stored.
+    // TODO(spapini): Is this necessary?
     let variant_selector =
         try_extract_matches!(matched_var.variant_selector, CellExpression::Deref)
             .ok_or(InvocationError::InvalidReferenceExpressionForArgument)?;

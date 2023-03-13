@@ -41,6 +41,7 @@ fn build_into_box(
         );
         for (index, cell) in operand.cells.iter().enumerate() {
             add_input_variables!(casm_builder, deref cell;);
+            // TODO: Don't use as i16, use try_into().
             casm_build_extend!(casm_builder, assert cell = addr[index as i16];);
         }
         addr

@@ -64,7 +64,7 @@ fn build_array_append(
     ))
 }
 
-/// Handles a Sierra statement for popping an element from the begining of an array.
+/// Handles a Sierra statement for popping an element from the beginning of an array.
 fn build_pop_front(
     elem_ty: &ConcreteTypeId,
     builder: CompiledInvocationBuilder<'_>,
@@ -155,17 +155,17 @@ fn build_array_get(
     };
     casm_build_extend! {casm_builder,
         // Assert offset - length >= 0.
-        assert array_length = *(range_check++);
+        assert array_length = *(range_check++); // BUG
         jump FailureHandle;
         InRange:
         // Assert offset < length, or that length-(offset+1) is in [0, 2^128).
         // Compute offset+1.
         const one = 1;
         tempvar element_offset_plus_1 = element_offset + one;
-        // Compute length-(offset+1).
-        tempvar offset_length_diff = element_offset_plus_1 - array_cell_size;
-        // Assert length-(offset+1) is in [0, 2^128).
-        assert element_offset_plus_1 = *(range_check++);
+        // Compute length - (offset + 1).
+        tempvar offset_length_diff = array_cell_size - element_offset_plus_1;  //?
+        // Assert length - (offset + 1) is in [0, 2^128).
+        assert offset_length_diff = *(range_check++);
         // Compute address of target cell.
         tempvar target_cell = arr_start + element_offset;
     };

@@ -116,10 +116,12 @@ impl NoGenericArgsGenericLibfunc for BoolEqualLibfunc {
                 },
             ],
             branch_signatures: vec![
+                // Equal.
                 BranchSignature {
                     vars: vec![],
                     ap_change: SierraApChange::Known { new_vars_only: false },
                 },
+                // Not equal.
                 BranchSignature {
                     vars: vec![],
                     ap_change: SierraApChange::Known { new_vars_only: false },

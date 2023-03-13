@@ -115,18 +115,19 @@ impl GenericLibfunc for FeltBinaryOperationLibfunc {
                 SierraApChange::Known { new_vars_only: true },
             )),
             [GenericArg::Value(c)] => {
+                // TODO: c.is_zero is not enough (e.g., if c==PRIME).
                 if matches!(self.operator, FeltBinaryOperator::Div) && c.is_zero() {
-                    Err(SpecializationError::UnsupportedGenericArg)
-                } else {
-                    Ok(LibfuncSignature::new_non_branch(
-                        vec![ty.clone()],
-                        vec![OutputVarInfo {
-                            ty,
-                            ref_info: OutputVarReferenceInfo::Deferred(DeferredOutputKind::Generic),
-                        }],
-                        SierraApChange::Known { new_vars_only: true },
-                    ))
+                    return Err(SpecializationError::UnsupportedGenericArg);
                 }
+
+                Ok(LibfuncSignature::new_non_branch(
+                    vec![ty.clone()],
+                    vec![OutputVarInfo {
+                        ty,
+                        ref_info: OutputVarReferenceInfo::Deferred(DeferredOutputKind::Generic),
+                    }],
+                    SierraApChange::Known { new_vars_only: true },
+                ))
             }
             _ => Err(SpecializationError::UnsupportedGenericArg),
         }
