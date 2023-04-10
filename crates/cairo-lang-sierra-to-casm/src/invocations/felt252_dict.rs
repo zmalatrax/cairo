@@ -507,7 +507,7 @@ fn build_squash_dict_inner(
         localvar aligned_dict_accesses_end_minus1;
         localvar aligned_next_key;
         localvar aligned_remaining_accesses;
-        // These local vars are used only after the loop rescopes so me need to adjust the ap.
+        // These local vars are used only after the loop rescopes so we need to adjust the ap.
         ap += 5;
         const dict_access_size = DICT_ACCESS_SIZE;
         const zero = 0;
@@ -672,6 +672,7 @@ fn build_squash_dict_inner(
         tempvar rec_arg_key = aligned_next_key;
         tempvar rec_arg_remaining_accesses = aligned_remaining_accesses;
         const dict_access_size = DICT_ACCESS_SIZE;
+        // TODO: check +dict_access_size.
         tempvar rec_arg_squashed_dict =
             squash_dict_inner_arg_squashed_dict_end + dict_access_size;
         tempvar rec_arg_big_keys = squash_dict_inner_arg_big_keys;
@@ -789,9 +790,12 @@ fn validate_felt252_lt(casm_builder: &mut CasmBuilder, range_check: Var, a: Var,
         tempvar a_minus_b = a - b;
         tempvar assert_le_arg_a;
         jump AssertLtFelt252NEQ if a_minus_b != 0;
+        // TODO: fail instead of the following assert.
         assert assert_le_arg_a = a + one;
+        // TODO: jump is not necessary.
         jump AssertLtFelt252End;
         AssertLtFelt252NEQ:
+        // TODO: this is also not necessary, since now a is the old key.
         assert assert_le_arg_a = a;
         AssertLtFelt252End:
     }

@@ -362,12 +362,17 @@ impl Display for Hint {
                 write!(f, "memory{should_continue} = 1 if current_access_indices else 0")
             }
             Hint::AssertCurrentAccessIndicesIsEmpty => {
+                // TODO: remove this hint.
                 write!(f, "assert len(current_access_indices) == 0")
             }
             Hint::AssertAllAccessesUsed { n_used_accesses } => {
+                // TODO: remove this hint.
                 write!(f, "assert memory{n_used_accesses} == len(access_indices[key])")
             }
-            Hint::AssertAllKeysUsed => write!(f, "assert len(keys) == 0"),
+            Hint::AssertAllKeysUsed => {
+                // TODO: remove this hint.
+                write!(f, "assert len(keys) == 0")
+            }
             Hint::GetNextDictKey { next_key } => writedoc!(
                 f,
                 "

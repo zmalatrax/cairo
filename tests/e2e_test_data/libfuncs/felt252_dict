@@ -356,75 +356,105 @@ call rel 5;
 [ap + 0] = [ap + -2], ap++;
 [ap + 0] = [ap + -2], ap++;
 ret;
+
+// ---------------------
+// inner
+// ---------------------
+
+[fp - 9] = range_check_ptr
+[fp - 8] = dict_start
+[fp - 7] = dict_end - 1
+[fp - 6] = key
+[fp + -4] = squashed_dict_ptr (current)
+[fp + 6] = remaining_accesses_new
+
+
 ap += 5;
 %{
 current_access_indices = sorted(access_indices[key])[::-1]
 current_access_index = current_access_indices.pop()
 memory[memory[fp + -9]] = current_access_index
 %}
-[ap + 2] = [[fp + -9] + 0], ap++;
-[ap + 2] = [ap + 1] * 3, ap++;
-[ap + 4] = [fp + -8] + [ap + 1], ap++;
-[ap + 4] = [[ap + 3] + 2], ap++;
-[ap + 4] = [fp + -9] + 1, ap++;
-[fp + -6] = [[ap + 1] + 0], ap++;
-[fp + -6] = [[fp + -4] + 0], ap++;
-[ap + -3] = [[ap + -1] + 1], ap++;
-[ap + -4] = [[fp + -4] + 1], ap++;
-[ap + -5] = 0;
-%{ memory[ap + -4] = 0 if current_access_indices else 1 %}
-jmp rel 15 if [ap + -4] != 0;
+[ap + 2] = [initial_range_check + 0], ap++;
+[ap + 3] = [ap + 2] * 3, ap++;
+entry = dict_start + [ap + 3], ap++;
+[ap + 7] = entry.new, ap++;
+[ap + 8] = initial_range_check + 1, ap++;
+key = [entry + 0], ap++;
+key = squashed_dict[0].key, ap++;
+0 = entry.prev, ap++;
+0 = squashed_dict[0].prev, ap++;
+0 = 0;
+
+// ap + 6 = entry
+
+%{ memory[ap + 5] = 0 if current_access_indices else 1 %}
+jmp rel 15 if [ap + 5] != 0;
+
+loop:
+
 %{
 new_access_index = current_access_indices.pop()
 memory[ap + 0] = new_access_index - current_access_index - 1
 current_access_index = new_access_index
 %}
-[ap + 0] = [[ap + -1] + 0], ap++;
-[ap + 0] = [ap + -1] + 1, ap++;
-[ap + 0] = [ap + -1] * 3, ap++;
-[ap + 1] = [ap + -6] + [ap + -1], ap++;
-[ap + -6] = [[ap + 0] + 1], ap++;
-[ap + 0] = [[ap + -1] + 2], ap++;
-[fp + -6] = [[ap + -2] + 0], ap++;
-[ap + -1] = [ap + -8] + 1;
+
+index_diff = [range_check_ptr + 0], ap++;
+[ap + 1] = index_diff + 1, ap++;
+[ap + 2] = [ap + 1] * 3, ap++;
+ptr2 = ptr + [ap + 2], ap++;
+prev_value = [ptr2 + 1], ap++;
+prev_value2 = new_value = [ptr2 + 2], ap++;
+key = [ptr2 + 0], ap++;
+range_check_ptr2 = range_check_ptr + 1
+
 %{ memory[ap + -4] = 1 if current_access_indices else 0 %}
-jmp rel -11 if [ap + -4] != 0;
+jmp loop if [ap + -4] != 0;
+
+
+
 %{ assert len(current_access_indices) == 0 %}
-[fp + -7] = [ap + 0] + [ap + -3], ap++;
-[ap + -1] = [[ap + -2] + 0];
-[ap + -2] = [ap + 0] + [fp + -9], ap++;
+[ap + 0] = [fp + -7] - [ap + -3] , ap++;
+[ap + 0] = [[ap + -1] + 0];
+
+n_accesses = [ap + -1] - [fp + -9], ap++;
 %{ assert memory[ap + -1] == len(access_indices[key]) %}
-[ap + -4] = [[fp + -4] + 2];
-[fp + -5] = [fp + 6] + [ap + -1];
-jmp rel 7 if [fp + 6] != 0;
+[ap + -2] = squashed_dict[0].new;
+remaining_accesses_new = remaining_accesses - n_accesses;
+jmp more_keys if remaining_accesses_new != 0;
 %{ assert len(keys) == 0 %}
-[ap + 0] = [ap + -3] + 1, ap++;
-[ap + 0] = [fp + -4] + 3, ap++;
+new_range_check_ptr = [ap + -1] + 1, ap++;
+new_squashed_dict = &squashed_dict[1], ap++;
 ret;
+
+more_keys:
 %{ assert len(keys) > 0, 'No keys left but remaining_accesses > 0.'
 memory[fp + 5] = key = keys.pop()
  %}
-jmp rel 14 if [fp + -3] != 0;
+jmp rel 14 if big_keys != 0;
 [ap + 0] = [fp + -6] + 1, ap++;
-[fp + 5] = [ap + 0] + [ap + -1], ap++;
-[ap + -1] = [[ap + -5] + 1];
-[fp + 0] = [ap + -5] + 2;
+key_diff = [range_check + 1];
+new_key = key_diff + [ap + 0], ap++;
+// TODO: not necessary to copy to local variables?
+[fp + 0] = range_check + 2;
 [fp + 1] = [fp + -8];
 [fp + 2] = [fp + -7];
-[fp + 3] = [fp + 5];
-[fp + 4] = [fp + 6];
+[fp + 3] = new_key;
+[fp + 4] = remaining_accesses_new;
 jmp rel 53;
+
+big_keys:
 %{
 from starkware.cairo.common.math_utils import assert_integer
 assert_integer(memory[fp + -6])
 assert_integer(memory[fp + 5])
 assert (memory[fp + -6] % PRIME) < (memory[fp + 5] % PRIME), f'a = {memory[fp + -6] % PRIME} is not less than b = {memory[fp + 5] % PRIME}.'
 %}
-[fp + -6] = [ap + 0] + [fp + 5], ap++;
-jmp rel 6 if [ap + -1] != 0, ap++;
-[ap + -1] = [fp + -6] + 1;
+key = key_diff + new_key, ap++;
+jmp rel 6 if key_diff != 0, ap++;
+key = key + 1;
 jmp rel 3;
-[ap + -1] = [fp + -6];
+[ap + 1] = key;
 %{
 import itertools
 
@@ -446,16 +476,18 @@ memory[memory[fp + -9] + 1], memory[memory[fp + -9] + 0] = (
 memory[memory[fp + -9] + 3], memory[memory[fp + -9] + 2] = (
     divmod(lengths_and_indices[1][0], 5316911983139663648412552867652567041))
 %}
-[ap + 0] = [[fp + -9] + 0], ap++;
-[ap + 0] = [[fp + -9] + 1], ap++;
-[ap + 0] = [ap + -1] * 5316911983139663648412552867652567041, ap++;
-[ap + 0] = [ap + -3] + [ap + -1], ap++;
-[ap + 0] = [[fp + -9] + 2], ap++;
-[ap + 0] = [[fp + -9] + 3], ap++;
-[ap + 0] = [ap + -1] * 3544607988759775765608368578435044694, ap++;
-[ap + 0] = [ap + -3] + [ap + -1], ap++;
-[ap + 0] = [ap + -5] + [ap + -1], ap++;
-[ap + 0] = [ap + -6] * [ap + -2], ap++;
+[ap + 2] = [[fp + -9] + 0], ap++;
+[ap + 3] = [[fp + -9] + 1], ap++;
+[ap + 4] = [ap + 3] * 5316911983139663648412552867652567041, ap++;
+[ap + 5] = [ap + 2] + [ap + 4], ap++;
+[ap + 6] = [[fp + -9] + 2], ap++;
+[ap + 7] = [[fp + -9] + 3], ap++;
+[ap + 8] = [ap + 7] * 3544607988759775765608368578435044694, ap++;
+[ap + 9] = [ap + 6] + [ap + 8], ap++;
+[ap + 10] = [ap + 5] + [ap + 9], ap++;
+[ap + 11] = [ap + 5] * [ap + 9], ap++;
+// ap + 12 for the next line
+
 %{ memory[ap + 0] = 1 if excluded != 0 else 0 %}
 jmp rel 12 if [ap + 0] != 0, ap++;
 [ap + 0] = [ap + -12] * -1, ap++;
@@ -480,15 +512,20 @@ jmp rel 5;
 [fp + 2] = [fp + -7];
 [fp + 3] = [fp + 5];
 [fp + 4] = [fp + 6];
+
+//////////////////////
+
+end_small_keys:
 [ap + 0] = [fp + 0], ap++;
 [ap + 0] = [fp + 1], ap++;
 [ap + 0] = [fp + 2], ap++;
 [ap + 0] = [fp + 3], ap++;
 [ap + 0] = [fp + 4], ap++;
-[ap + 0] = [fp + -4] + 3, ap++;
-[ap + 0] = [fp + -3], ap++;
+[ap + 0] = &squashed_dict[1], ap++;
+[ap + 0] = big_keys, ap++;
 call rel -115;
 ret;
+
 [ap + 0] = [ap + -5], ap++;
 [ap + 0] = [ap + -4], ap++;
 [ap + 0] = [ap + -6], ap++;
