@@ -261,68 +261,83 @@ fn foo(dict: Felt252Dict::<felt252>) -> SquashedFelt252Dict::<felt252> {
 }
 
 //! > casm
-[ap + 0] = [fp + -6], ap++;
-[ap + 0] = [fp + -4], ap++;
-[ap + 0] = [fp + -5], ap++;
-[ap + 0] = [fp + -3], ap++;
-call rel 4;
+// TODO: this copy is not necessary.
+[ap + 0] = [fp + -6], ap++; // rc
+[ap + 0] = [fp + -4], ap++; // gas
+[ap + 0] = [fp + -5], ap++; // arena
+[ap + 0] = [fp + -3], ap++; // end
+call main_func;
 jmp rel 204;
-[fp + 2] = [fp + -5], ap++;
+
+main_func:
+// TODO: remove this copy. FIXED
+[fp + 2] = [fp + -5], ap++; // gas
 ap += 3;
 %{
 memory[fp + 0] = __segment_index_to_arena_index[
     memory[fp + -3].segment_index
 ]
 %}
-[fp + 3] = [[fp + -4] + -3];
-[fp + 4] = [[fp + -4] + -2], ap++;
-[fp + 5] = [[fp + -4] + -1], ap++;
-[fp + 0] = [[fp + -6] + 0];
-[fp + 4] = [ap + 0] + 1, ap++;
-[ap + -1] = [ap + 0] + [fp + 0], ap++;
-[ap + -1] = [[fp + -6] + 1];
-[ap + 0] = [fp + 0] * 3, ap++;
-[ap + 0] = [fp + 3] + [ap + -1], ap++;
-[fp + 5] = [[ap + -1] + 2];
-[fp + -3] = [[ap + -1] + 1];
-[fp + 3] = [[fp + -4] + 0];
-[fp + 4] = [[fp + -4] + 1];
-[ap + 0] = [fp + 5] + 1, ap++;
-[ap + -1] = [[fp + -4] + 2];
-[ap + 0] = [[ap + -2] + 0], ap++;
-[fp + -3] = [fp + 1] + [ap + -1];
-[ap + 0] = [fp + -6] + 2, ap++;
-[ap + 0] = [[ap + -4] + 0], ap++;
-[ap + 0] = [fp + -3], ap++;
-call rel 15;
-[ap + -1] = [ap + 0] + [ap + -2], ap++;
-[fp + 1] = [ap + 0] + [ap + -1], ap++;
-[ap + -1] = [ap + 0] * 3, ap++;
-[ap + 0] = [ap + -1] * 5920, ap++;
-[ap + 0] = [ap + -7], ap++;
-[ap + 0] = [fp + 2] + [ap + -2], ap++;
-[ap + 0] = [fp + -4] + 3, ap++;
-[ap + 0] = [ap + -9], ap++;
-[ap + 0] = [ap + -9], ap++;
+[fp + 3] = [arena + -3]; // infos
+n_new_dicts = [arena + -2], ap++;
+n_destructed_dicts = [arena + -1], ap++;
+arena_index = [[fp + -6] + 0];
+[ap + 0] = n_new_dicts - 1, ap++;
+[ap + 0] = [ap + 1] + arena_index, ap++; // [ap + 1] = n_new_dicts - 1 - arena_index
+[ap + 1] = [[fp + -6] + 1];
+[ap + 2] = arena_index * 3, ap++;
+arena_entry = infos + [ap + 2], ap++;
+[arena_entry + 2] = n_destructed_dicts;
+end = [arena_entry + 1];
+infos = [arena + 0];
+n_new_dicts = [arena + 1];
+[ap + 4] = n_destructed_dicts + 1, ap++;
+[ap + 4] = [arena + 2];
+[ap + 5] = [arena_entry + 0], ap++;
+end - [ap + 5] = [fp + 1];
+[ap + 6] = [fp + -6] + 2, ap++;
+[ap + 7] = [arena_entry + 0], ap++;
+[ap + 8] = end, ap++;
+// last instruction was increase by 8
+// args: rc, start, end
+call rel with_alloc;
+
+squashed_dict_end - squashed_dict_start = squashed_dict_size, ap++;
+dict_size - squashed_dict_size = refund_times_3, ap++;
+refund_times_3 / 3 = refund_entries, ap++;
+refund_in_gas = refund_entries * 5920, ap++;
+[ap + 4] = rc, ap++;
+[ap + 5] = gas + refund_in_gas, ap++;
+[ap + 6] = arena + 3, ap++;
+[ap + 7] = squashed_dict_start, ap++;
+[ap + 8] = squashed_dict_end, ap++;
 ret;
+
+with_alloc:
 ap += 1;
 %{ memory[fp + 0] = segments.add() %}
-[ap + 0] = [fp + -5], ap++;
-[ap + 0] = [fp + -4], ap++;
-[ap + 0] = [fp + -3], ap++;
-[ap + 0] = [fp + 0], ap++;
-call rel 6;
-[ap + 0] = [ap + -2], ap++;
-[ap + 0] = [fp + 0], ap++;
-[ap + 0] = [ap + -3], ap++;
+[ap + 0] = [fp + -5], ap++; // rc
+[ap + 0] = [fp + -4], ap++; // start
+[ap + 0] = [fp + -3], ap++; // end
+[ap + 0] = squashed_dict_start, ap++;
+call after_alloc;
+
+[ap + 0] = rc, ap++;
+[ap + 1] = squashed_dict_start, ap++;
+[ap + 2] = squashed_dict_end, ap++;
 ret;
-[fp + -4] = [fp + 0] + [fp + -5], ap++;
+
+after_alloc:
+// TODO: end - start was already computed.
+end - start = [fp + 0], ap++;
 ap += 2;
-jmp rel 5 if [fp + 0] != 0;
+jmp dict_nonempty if [fp + 0] != 0;
 [ap + 0] = [fp + -6], ap++;
 [ap + 0] = [fp + -3], ap++;
 ret;
-[fp + 0] = [ap + 0] * 3, ap++;
+
+dict_nonempty:
+[fp + 0] = dict_len * 3, ap++;
 %{
 dict_access_size = 3
 address = memory[fp + -5]
@@ -341,18 +356,23 @@ keys = sorted(access_indices.keys(), reverse=True)
 memory[fp + 2] = 1 if keys[0] >= range_check_builtin.bound else 0
 memory[fp + 1] = key = keys.pop()
 %}
-jmp rel 7 if [fp + 2] != 0, ap++;
-[fp + 1] = [[fp + -6] + 0];
-[ap + -1] = [fp + -6] + 1;
-jmp rel 3;
-[ap + -1] = [fp + -6];
-[ap + 0] = [fp + -5], ap++;
-[fp + -4] = [ap + 0] + 1, ap++;
-[ap + 0] = [fp + 1], ap++;
-[ap + 0] = [ap + -5], ap++;
-[ap + 0] = [fp + -3], ap++;
-[ap + 0] = [fp + 2], ap++;
-call rel 5;
+jmp big_keys2 if big_keys != 0, ap++;
+[fp + 1] = [[fp + -6] + 0]; // range-check first key.
+[ap + 1] = [fp + -6] + 1;
+jmp continue;
+
+big_keys2:
+[ap + 1] = [fp + -6];
+
+continue:
+[ap + 2] = [fp + -5], ap++;
+[ap + 3] = end - 1, ap++;
+[ap + 4] = first_key, ap++;
+[ap + 5] = dict_len, ap++;
+[ap + 6] = squashed_dict_start, ap++;
+[ap + 7] = big_keys, ap++;
+call inner;
+// TODO: the following instructions are not necessary. FIXED
 [ap + 0] = [ap + -2], ap++;
 [ap + 0] = [ap + -2], ap++;
 ret;
@@ -365,7 +385,9 @@ ret;
 [fp - 8] = dict_start
 [fp - 7] = dict_end - 1
 [fp - 6] = key
-[fp + -4] = squashed_dict_ptr (current)
+[fp - 5] = remaining_accesses_before
+[fp - 4] = squashed_dict_ptr (current)
+[fp - 3] = big_keys
 [fp + 6] = remaining_accesses_new
 
 
@@ -390,6 +412,7 @@ key = squashed_dict[0].key, ap++;
 
 %{ memory[ap + 5] = 0 if current_access_indices else 1 %}
 jmp rel 15 if [ap + 5] != 0;
+// cost of far 12
 
 loop:
 
@@ -489,28 +512,33 @@ memory[memory[fp + -9] + 3], memory[memory[fp + -9] + 2] = (
 // ap + 12 for the next line
 
 %{ memory[ap + 0] = 1 if excluded != 0 else 0 %}
-jmp rel 12 if [ap + 0] != 0, ap++;
-[ap + 0] = [ap + -12] * -1, ap++;
-[ap + -4] = [ap + -1] + -1;
-[ap + -13] = [ap + 0] + [fp + 5], ap++;
-[ap + 0] = [fp + 5] + 1, ap++;
-[ap + -5] = [ap + -2] * [ap + -1];
-jmp rel 15;
+jmp rel 12 if [ap + 12] != 0, ap++;
+[ap + 13] = key * -1, ap++;
+[ap + 10] = [ap + 13] + -1; // (PRIME - 1) - key
+key - new_key = [ap + 14], ap++; // key - new_key
+[ap + 15] = new_key + 1, ap++; // new_key + 1
+[ap + 11] = [ap + 14] * [ap + 15]; // (new_key - key) * (PRIME -1 - new_key)
+jmp finish_big_key;
+
+// add 13
 %{ memory[ap + 0] = 1 if excluded != 1 else 0 %}
-jmp rel 10 if [ap + 0] != 0, ap++;
-[ap + 0] = [fp + 5] * -1, ap++;
-[ap + 0] = [fp + 5] + -1, ap++;
-[ap + -6] = [ap + -15] + [ap + -1];
-[ap + -5] = [ap + -15] * [ap + -1];
-jmp rel 5;
+jmp rel 10 if [ap + 13] != 0, ap++;
+[ap + 14] = new_key * -1, ap++; // -new_key
+[ap + 15] = [ap + 14] + -1, ap++; // -new_key - 1
+[ap + 10] = [ap + 1] + [ap + 15]; // key + ((PRIME - 1) - new_key)
+[ap + 11] = [ap + 1] * [ap + 15]; // key * ((PRIME - 1) - new_key)
+jmp finish_big_key;
+
 %{ assert excluded == 2 %}
-[ap + -4] = [fp + 5], ap++;
-[fp + 5] = [ap + 0] + [ap + -14], ap++;
-[ap + -5] = [ap + -15] * [ap + -1];
+[ap + 10] = new_key, ap++;
+new_key - key = [ap + 15], ap++;
+[ap + 11] = [ap + 1] * [ap + 15]; // key * (new_key - key)
+
+finish_big_key:
 [fp + 0] = [fp + -9] + 4;
 [fp + 1] = [fp + -8];
 [fp + 2] = [fp + -7];
-[fp + 3] = [fp + 5];
+[fp + 3] = new_key;
 [fp + 4] = [fp + 6];
 
 //////////////////////
@@ -523,7 +551,7 @@ end_small_keys:
 [ap + 0] = [fp + 4], ap++;
 [ap + 0] = &squashed_dict[1], ap++;
 [ap + 0] = big_keys, ap++;
-call rel -115;
+call inner;
 ret;
 
 [ap + 0] = [ap + -5], ap++;
@@ -532,6 +560,8 @@ ret;
 [ap + 0] = [ap + -5], ap++;
 [ap + 0] = [ap + -5], ap++;
 ret;
+
+
 
 //! > function_costs
 test::foo: OrderedHashMap({Const: 8210})

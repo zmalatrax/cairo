@@ -209,6 +209,7 @@ fn build_felt252_dict_squash(
             assert dict_accesses_len = dict_destruct_arg_dict_end_address - dict_accesses_start;
             // Push SquashDictWithAlloc arguments.
             tempvar dict_squash_arg_range_check_ptr = dict_destruct_arg_range_check_ptr;
+            // TODO: info_ptr[0] was already computed above (dict_accesses_start).
             tempvar dict_squash_arg_dict_accesses_start = info_ptr[0];
             tempvar dict_squash_arg_dict_accesses_end = dict_destruct_arg_dict_end_address;
             let (range_check_ptr, squashed_dict_start, squashed_dict_end) = call SquashDictWithAlloc;
@@ -848,8 +849,8 @@ fn validate_felt252_le(casm_builder: &mut CasmBuilder, range_check: Var, a: Var,
         hint AssertLeIsSecondArcExcluded {} into {skip_exclude_b_minus_a: skip_exclude_b_minus_a};
         jump AssertLeFelt252SkipExcludeBMinusA if skip_exclude_b_minus_a != 0;
         // Exclude "a -> b".
-        tempvar minus_arg_b = b*minus_1;
-        tempvar minus_b_minus_1 = b + minus_1;
+        tempvar minus_arg_b = b * minus_1;
+        tempvar minus_b_minus_1 = minus_arg_b + minus_1;
         assert arc_sum = a + minus_b_minus_1;
         assert arc_prod = a * minus_b_minus_1;
         jump EndOfFelt252Le;
