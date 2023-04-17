@@ -81,3 +81,23 @@ fn get_u256_type(
         ],
     )
 }
+
+// /// Helper for Option type def.
+// fn get_option_type(
+//     context: &dyn SignatureSpecializationContext,
+//     inner_type: ConcreteTypeId,
+// ) -> Result<ConcreteTypeId, SpecializationError> {
+//     let unit_type = get_unit_type(context)?;
+//     println!("yg calling get_concrete_type, inner_type: {inner_type}");
+//     context.get_concrete_type(
+//         EnumType::id(),
+//         &[
+//             // TODO(yg): make this work with a generic type. Get the full path of inner_type!
+//             GenericArg::UserType(UserTypeId::from_string(
+//                 "core::option::Option::<core::starknet::secp256k1::Secp256K1EcPoint>",
+//             )),
+//             GenericArg::Type(inner_type),
+//             GenericArg::Type(unit_type),
+//         ],
+//     )
+// }
