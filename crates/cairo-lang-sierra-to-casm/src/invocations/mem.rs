@@ -148,6 +148,7 @@ fn build_finalize_locals(
         builder.environment.frame_state,
         builder.environment.ap_tracking,
     )?;
+    // TODO: Move frame_state as mut ref.
     builder.environment.frame_state = frame_state;
     Ok(builder.build(
         casm! { ap += (n_slots as i128); }.instructions,
@@ -167,6 +168,7 @@ fn build_alloc_local(
         .get(ty)
         .ok_or_else(|| InvocationError::NotSized(builder.invocation.clone()))?;
 
+    // TODO: Move frame_state as mut ref.
     let (slot, frame_state) = frame_state::handle_alloc_local(
         builder.environment.frame_state,
         builder.environment.ap_tracking,
