@@ -318,10 +318,6 @@ trait MyTrait {
 }
 
 //! > expected_diagnostics
-error: Trait function `MyTrait::foo` has a body. Trait functions with body are not supported.
- --> lib.cairo:2:13
-   fn foo() {}
-            ^^
 
 //! > ==========================================================================
 
