@@ -1,0 +1,163 @@
+//! > Default implementation in the trait, call from impl.
+
+//! > test_runner_name
+test_function_lowering
+
+//! > function
+fn foo() -> usize {
+    MyImpl::bar()
+}
+
+//! > function_name
+foo
+
+//! > module_code
+trait MyTrait {
+    fn bar() -> usize { 1 }
+}
+impl MyImpl of MyTrait {}
+
+//! > semantic_diagnostics
+
+//! > lowering_diagnostics
+
+//! > lowering_flat
+Parameters:
+blk0 (root):
+Statements:
+  (v1: core::integer::u32) <- 1u
+End:
+  Return(v1)
+
+//! > ==========================================================================
+
+//! > Default implementation in the trait, call from trait.
+
+//! > test_runner_name
+test_function_lowering
+
+//! > function
+fn foo() -> usize {
+    MyTrait::bar()
+}
+
+//! > function_name
+foo
+
+//! > module_code
+trait MyTrait {
+    fn bar() -> usize { 1 }
+}
+impl MyImpl of MyTrait {}
+
+//! > semantic_diagnostics
+
+//! > lowering_diagnostics
+
+//! > lowering_flat
+Parameters:
+blk0 (root):
+Statements:
+  (v1: core::integer::u32) <- 1u
+End:
+  Return(v1)
+
+//! > ==========================================================================
+
+//! > Default implementation in the trait, call from trait with no existing impl.
+
+//! > test_runner_name
+test_function_lowering
+
+//! > function
+fn foo() -> usize {
+    MyTrait::bar()
+}
+
+//! > function_name
+foo
+
+//! > module_code
+trait MyTrait {
+    fn bar() -> usize { 1 }
+}
+
+//! > semantic_diagnostics
+error: Trait has no implementation in context: test::MyTrait
+ --> lib.cairo:5:14
+    MyTrait::bar()
+             ^*^
+
+//! > lowering_diagnostics
+
+//! > lowering_flat
+
+//! > ==========================================================================
+
+//! > Default implementation in the trait and override in the impl, call from trait.
+
+//! > test_runner_name
+test_function_lowering
+
+//! > function
+fn foo() -> usize {
+    MyTrait::bar()
+}
+
+//! > function_name
+foo
+
+//! > module_code
+trait MyTrait {
+    fn bar() -> usize { 1 }
+}
+impl MyImpl of MyTrait {
+    fn bar() -> usize { 2 }
+}
+
+//! > semantic_diagnostics
+
+//! > lowering_diagnostics
+
+//! > lowering_flat
+Parameters:
+blk0 (root):
+Statements:
+  (v1: core::integer::u32) <- 2u
+End:
+  Return(v1)
+
+//! > ==========================================================================
+
+//! > Default implementation in the trait and override in the impl, call from impl.
+
+//! > test_runner_name
+test_function_lowering
+
+//! > function
+fn foo() -> usize {
+    MyImpl::bar()
+}
+
+//! > function_name
+foo
+
+//! > module_code
+trait MyTrait {
+    fn bar() -> usize { 1 }
+}
+impl MyImpl of MyTrait {
+    fn bar() -> usize { 2 }
+}
+
+//! > semantic_diagnostics
+
+//! > lowering_diagnostics
+
+//! > lowering_flat
+Parameters:
+blk0 (root):
+Statements:
+  (v1: core::integer::u32) <- 2u
+End:
+  Return(v1)

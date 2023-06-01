@@ -21,8 +21,7 @@ use super::functions::{FunctionDeclarationData, ImplicitPrecedence, InlineConfig
 use super::generics::semantic_generic_params;
 use super::imp::{GenericsHeadFilter, TraitFilter};
 use crate::db::SemanticGroup;
-use crate::diagnostic::SemanticDiagnosticKind::{self, *};
-use crate::diagnostic::SemanticDiagnostics;
+use crate::diagnostic::{SemanticDiagnosticKind, SemanticDiagnostics};
 use crate::expr::compute::{compute_root_expr, ComputationContext, Environment};
 use crate::expr::inference::canonic::ResultNoErrEx;
 use crate::resolve::{Resolver, ResolverData};
@@ -498,10 +497,7 @@ fn validate_trait_function_signature(
         if param.mutability == Mutability::Mutable {
             diagnostics.report(
                 &sig_syntax.parameters(syntax_db).elements(syntax_db)[idx].modifiers(syntax_db),
-                crate::diagnostic::SemanticDiagnosticKind::TraitParamMutable {
-                    trait_id,
-                    function_id,
-                },
+                SemanticDiagnosticKind::TraitParamMutable { trait_id, function_id },
             );
         }
     }

@@ -683,11 +683,45 @@ impl LanguageServer for Backend {
                 LookupItemId::ModuleItem(ModuleItemId::FreeFunction(free_function_id)) => {
                     FunctionWithBodyId::Free(free_function_id)
                 }
+<<<<<<< HEAD
                 LookupItemId::ImplFunction(impl_function_id) => {
                     FunctionWithBodyId::Impl(impl_function_id)
                 }
+                // TODO(yg): add trait_function_id?
                 _ => {
                     return None;
+||||||| parent of 20beeb02... Fixup: added ImplOrTraitFunctionId
+                ResolvedGenericItem::GenericFunction(item) => {
+                    let title = match item {
+                        GenericFunctionId::Free(id) => FunctionTitleId::Free(id),
+                        GenericFunctionId::Extern(id) => FunctionTitleId::Extern(id),
+                        GenericFunctionId::Impl(id) => {
+                            // Note: Only the trait title is returned.
+                            FunctionTitleId::Trait(id.function)
+                        }
+                        GenericFunctionId::Trait(id) => FunctionTitleId::Trait(id),
+                    };
+                    (
+                        title.parent_module(defs_db),
+                        title.file_index(defs_db),
+                        title.untyped_stable_ptr(defs_db),
+                    )
+=======
+                ResolvedGenericItem::GenericFunction(item) => {
+                    let title = match item {
+                        GenericFunctionId::Free(id) => FunctionTitleId::Free(id),
+                        GenericFunctionId::Extern(id) => FunctionTitleId::Extern(id),
+                        GenericFunctionId::Impl(id) => {
+                            // Note: Only the trait title is returned.
+                            FunctionTitleId::Trait(id.function)
+                        }
+                    };
+                    (
+                        title.parent_module(defs_db),
+                        title.file_index(defs_db),
+                        title.untyped_stable_ptr(defs_db),
+                    )
+>>>>>>> 20beeb02... Fixup: added ImplOrTraitFunctionId
                 }
             };
 
@@ -743,6 +777,7 @@ impl LanguageServer for Backend {
                                 // Note: Only the trait title is returned.
                                 FunctionTitleId::Trait(id.function)
                             }
+                            GenericFunctionId::Trait(id) => FunctionTitleId::Trait(id),
                         };
                         (
                             title.parent_module(defs_db),
