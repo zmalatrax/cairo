@@ -21,8 +21,7 @@ use super::functions::{FunctionDeclarationData, ImplicitPrecedence, InlineConfig
 use super::generics::semantic_generic_params;
 use super::imp::{GenericsHeadFilter, TraitFilter};
 use crate::db::SemanticGroup;
-use crate::diagnostic::SemanticDiagnosticKind::{self, *};
-use crate::diagnostic::SemanticDiagnostics;
+use crate::diagnostic::{SemanticDiagnosticKind, SemanticDiagnostics};
 use crate::expr::compute::{compute_root_expr, ComputationContext, Environment};
 use crate::expr::inference::canonic::ResultNoErrEx;
 use crate::resolve::{Resolver, ResolverData};
@@ -459,13 +458,17 @@ pub fn priv_trait_function_declaration_data(
         &signature,
         &signature_syntax,
     );
-    // Validate trait function body is empty.
-    if matches!(function_syntax.body(syntax_db), ast::MaybeTraitFunctionBody::Some(_)) {
-        diagnostics.report(
-            &function_syntax.body(syntax_db),
-            TraitFunctionWithBody { trait_id, function_id: trait_function_id },
-        );
-    }
+    // // TODO(yg): remove this validation and respective diagnostic.
+    // // Validate trait function body is empty.
+    // if matches!(function_syntax.body(syntax_db), ast::MaybeTraitFunctionBody::Some(_)) {
+    //     diagnostics.report(
+    //         &function_syntax.body(syntax_db),
+    //         SemanticDiagnosticKind::TraitFunctionWithBody {
+    //             trait_id,
+    //             function_id: trait_function_id,
+    //         },
+    //     );
+    // }
 
     let attributes = function_syntax.attributes(syntax_db).structurize(syntax_db);
     let resolver_data = Arc::new(resolver.data);
@@ -498,10 +501,7 @@ fn validate_trait_function_signature(
         if param.mutability == Mutability::Mutable {
             diagnostics.report(
                 &sig_syntax.parameters(syntax_db).elements(syntax_db)[idx].modifiers(syntax_db),
-                crate::diagnostic::SemanticDiagnosticKind::TraitParamMutable {
-                    trait_id,
-                    function_id,
-                },
+                SemanticDiagnosticKind::TraitParamMutable { trait_id, function_id },
             );
         }
     }

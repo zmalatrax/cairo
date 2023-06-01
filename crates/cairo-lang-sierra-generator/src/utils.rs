@@ -296,32 +296,36 @@ pub fn get_concrete_libfunc_id(
     db: &dyn SierraGenGroup,
     function: lowering::ids::FunctionId,
 ) -> (Option<lowering::ids::ConcreteFunctionWithBodyId>, ConcreteLibfuncId) {
-    // Check if this is a user-defined function or a libfunc.
-    if let Some(body) = function.body(db.upcast()).expect("No diagnostics at this stage.") {
-        return (Some(body), function_call_libfunc_id(db, function));
-    }
-    let semantic =
-        extract_matches!(function.lookup(db.upcast()), lowering::ids::FunctionLongId::Semantic);
-    let concrete_function = db.lookup_intern_function(semantic).function;
-    let extern_id = extract_matches!(concrete_function.generic_function, GenericFunctionId::Extern);
+    if let lowering::ids::FunctionLongId::Semantic(semantic_function) = function.lookup(db.upcast())
+    {
+        let concrete_function = db.lookup_intern_function(semantic_function).function;
+        if let GenericFunctionId::Extern(extern_id) = concrete_function.generic_function {
+            // This is a libfunc.
+            let mut generic_args = vec![];
+            for generic_arg in &concrete_function.generic_args {
+                generic_args.push(match generic_arg {
+                    semantic::GenericArgumentId::Type(ty) => {
+                        // TODO(lior): How should the following unwrap() be handled?
+                        cairo_lang_sierra::program::GenericArg::Type(
+                            db.get_concrete_type_id(*ty).unwrap(),
+                        )
+                    }
+                    semantic::GenericArgumentId::Literal(literal_id) => {
+                        cairo_lang_sierra::program::GenericArg::Value(
+                            db.lookup_intern_literal(*literal_id).value,
+                        )
+                    }
+                    semantic::GenericArgumentId::Impl(_) => {
+                        panic!("Extern function with impl generics are not supported.")
+                    }
+                });
+            }
 
-    let mut generic_args = vec![];
-    for generic_arg in &concrete_function.generic_args {
-        generic_args.push(match generic_arg {
-            semantic::GenericArgumentId::Type(ty) => {
-                // TODO(lior): How should the following unwrap() be handled?
-                cairo_lang_sierra::program::GenericArg::Type(db.get_concrete_type_id(*ty).unwrap())
-            }
-            semantic::GenericArgumentId::Literal(literal_id) => {
-                cairo_lang_sierra::program::GenericArg::Value(
-                    db.lookup_intern_literal(*literal_id).value,
-                )
-            }
-            semantic::GenericArgumentId::Impl(_) => {
-                panic!("Extern function with impl generics are not supported.")
-            }
-        });
+            return (None, generic_libfunc_id(db, extern_id, generic_args));
+        }
     }
 
-    (None, generic_libfunc_id(db, extern_id, generic_args))
+    // This is a user defined function, it must have a body.
+    let body = function.body(db.upcast()).expect("No diagnostics at this stage.").unwrap();
+    (Some(body), function_call_libfunc_id(db, function))
 }

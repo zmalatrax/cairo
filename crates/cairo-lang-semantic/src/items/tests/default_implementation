@@ -1,0 +1,53 @@
+//! > Default implementation in the trait.
+
+//! > test_runner_name
+test_function_diagnostics
+
+//! > function
+fn foo() {
+    MyImpl::bar1();
+    MyImpl::bar2();
+}
+
+//! > function_name
+foo
+
+//! > module_code
+trait MyTrait {
+    fn bar1();
+    fn bar2() {}
+}
+impl MyImpl of MyTrait {
+    fn bar1() {}
+}
+
+//! > expected_diagnostics
+
+//! > ==========================================================================
+
+//! > Missing implementation of a trait function.
+
+//! > test_runner_name
+test_function_diagnostics
+
+//! > function
+fn foo() {
+}
+
+//! > function_name
+foo
+
+//! > module_code
+trait MyTrait {
+    fn bar1();
+    fn bar2();
+}
+impl MyImpl of MyTrait {
+    fn bar1() {}
+}
+
+//! > expected_diagnostics
+error: Not all trait items are implemented. Missing: 'bar2'.
+ --> lib.cairo:5:6
+impl MyImpl of MyTrait {
+     ^****^

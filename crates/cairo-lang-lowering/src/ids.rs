@@ -210,7 +210,7 @@ impl FunctionLongId {
         let semantic_db = db.upcast();
         let long_id = match *self {
             FunctionLongId::Semantic(id) => {
-                let Some(body) = id.get_concrete(semantic_db).body(semantic_db)? else {
+                let Some(body) = id.body(semantic_db)? else {
                     return Ok(None);
                 };
                 ConcreteFunctionWithBodyLongId::Semantic(body)
