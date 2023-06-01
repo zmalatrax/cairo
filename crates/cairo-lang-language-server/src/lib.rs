@@ -693,6 +693,7 @@ impl LanguageServer for Backend {
                             // Note: Only the trait title is returned.
                             FunctionTitleId::Trait(id.function)
                         }
+                        GenericFunctionId::Trait(id) => FunctionTitleId::Trait(id),
                     };
                     (
                         title.parent_module(defs_db),

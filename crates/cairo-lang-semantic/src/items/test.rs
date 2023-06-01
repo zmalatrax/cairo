@@ -4,6 +4,7 @@ cairo_lang_test_utils::test_file_test!(
     diagnostics,
     "src/items/tests",
     {
+        default_implementation: "default_implementation",
         enum_: "enum",
         extern_func: "extern_func",
         free_function: "free_function",

@@ -20,8 +20,7 @@ use super::function_with_body::{get_implicit_precedence, get_inline_config, Func
 use super::functions::{FunctionDeclarationData, ImplicitPrecedence, InlineConfiguration};
 use super::generics::semantic_generic_params;
 use crate::db::SemanticGroup;
-use crate::diagnostic::SemanticDiagnosticKind::{self, *};
-use crate::diagnostic::SemanticDiagnostics;
+use crate::diagnostic::{SemanticDiagnosticKind, SemanticDiagnostics};
 use crate::expr::compute::{compute_root_expr, ComputationContext, Environment};
 use crate::resolve::{Resolver, ResolverData};
 use crate::substitution::{GenericSubstitution, SemanticRewriter, SubstitutionRewriter};
@@ -73,6 +72,9 @@ impl ConcreteTraitId {
     }
     pub fn generic_args(&self, db: &dyn SemanticGroup) -> Vec<GenericArgumentId> {
         db.lookup_intern_concrete_trait(*self).generic_args
+    }
+    pub fn name(&self, db: &dyn SemanticGroup) -> SmolStr {
+        self.trait_id(db).name(db.upcast())
     }
 }
 
@@ -475,10 +477,7 @@ fn validate_trait_function_signature(
         if param.mutability == Mutability::Mutable {
             diagnostics.report(
                 &sig_syntax.parameters(syntax_db).elements(syntax_db)[idx].modifiers(syntax_db),
-                crate::diagnostic::SemanticDiagnosticKind::TraitParamMutable {
-                    trait_id,
-                    function_id,
-                },
+                SemanticDiagnosticKind::TraitParamMutable { trait_id, function_id },
             );
         }
     }

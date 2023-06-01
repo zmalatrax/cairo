@@ -22,6 +22,7 @@
 // Call sites, variable usages, assignments, etc. are NOT definitions.
 
 use cairo_lang_debug::debug::DebugWithDb;
+use cairo_lang_diagnostics::Maybe;
 use cairo_lang_filesystem::ids::CrateId;
 use cairo_lang_syntax::node::ast::TerminalIdentifierGreen;
 use cairo_lang_syntax::node::db::SyntaxGroup;
@@ -86,6 +87,11 @@ macro_rules! define_language_element_id_partial {
                     let terminal_green = self.1.name_green(syntax_db);
                     terminal_green.identifier(syntax_db)
                 }
+                pub fn to_ast(&self, db: &dyn DefsGroup) -> Maybe<$ast_ty> {
+                    let file_id = db.module_file(self.0)?;
+                    let root = db.file_syntax(file_id)?;
+                    Ok(<$ast_ty>::from_ptr(db.upcast(), &root, self.1))
+                }
             }
             impl<'a, T: ?Sized + cairo_lang_utils::Upcast<dyn DefsGroup + 'a>> cairo_lang_debug::DebugWithDb<T>
                 for $long_id
@@ -107,6 +113,12 @@ macro_rules! define_language_element_id_partial {
         impl $short_id {
             pub fn stable_ptr(self, db: &dyn DefsGroup) -> <$ast_ty as TypedSyntaxNode>::StablePtr {
                 db.$lookup(self).1
+            }
+            pub fn to_ast(&self, db: &dyn DefsGroup) -> Maybe<$ast_ty> {
+                let $long_id(module_file_id, ptr) = db.$lookup(*self);
+                let file_id = db.module_file(module_file_id)?;
+                let root = db.file_syntax(file_id)?;
+                Ok(<$ast_ty>::from_ptr(db.upcast(), &root, ptr))
             }
             $(
                 pub fn $name(&self, db: &dyn DefsGroup) -> SmolStr {
@@ -367,11 +379,20 @@ impl TopLevelLanguageElementId for ImplFunctionId {
     }
 }
 
+// TODO(yg2): remove or try using this (if needed, add more info) FunctionWithBodyId::Trait instead
+// of TraitFunctionId. struct TraitFunctionWithBody {
+//     body: ast::ExprBlock,
+//     name: SmolStr,
+// }
+
 define_language_element_id_as_enum! {
     /// Represents a function that has a body.
     pub enum FunctionWithBodyId {
         Free(FreeFunctionId),
         Impl(ImplFunctionId),
+        // A trait function that has a body (default implementation).
+        // TODO(yg2): Try to store here a type with nonoptional body... can we use here some inner type? What is needed here?
+        Trait(TraitFunctionId),
     }
 }
 impl FunctionWithBodyId {
@@ -379,6 +400,7 @@ impl FunctionWithBodyId {
         match self {
             FunctionWithBodyId::Free(free_function) => free_function.name(db),
             FunctionWithBodyId::Impl(impl_function) => impl_function.name(db),
+            FunctionWithBodyId::Trait(trait_function) => trait_function.name(db),
         }
     }
 }
@@ -391,6 +413,9 @@ impl TopLevelLanguageElementId for FunctionWithBodyId {
             }
             FunctionWithBodyId::Impl(impl_function_id) => {
                 db.lookup_intern_impl_function(*impl_function_id).name(db)
+            }
+            FunctionWithBodyId::Trait(trait_function_id) => {
+                db.lookup_intern_trait_function(*trait_function_id).name(db)
             }
         }
     }
@@ -438,7 +463,7 @@ impl TraitFunctionId {
     pub fn trait_id(&self, db: &dyn DefsGroup) -> TraitId {
         let TraitFunctionLongId(module_file_id, ptr) = db.lookup_intern_trait_function(*self);
         // Trait function ast lies a few levels bellow the trait ast.
-        // Fetch the grand grand grand parent.
+        // Fetch the grand grand parent.
         // TODO(spapini): Use a parent function.
         let SyntaxStablePtr::Child{parent, ..} = db.lookup_intern_stable_ptr(ptr.untyped()) else {
             panic!()
@@ -451,6 +476,12 @@ impl TraitFunctionId {
         };
         let trait_ptr = ast::ItemTraitPtr(parent);
         db.intern_trait(TraitLongId(module_file_id, trait_ptr))
+    }
+    pub fn body(&self, db: &dyn DefsGroup) -> Option<ast::ExprBlock> {
+        match self.to_ast(db).unwrap().body(db.upcast()) {
+            ast::MaybeTraitFunctionBody::Some(block) => Some(block),
+            ast::MaybeTraitFunctionBody::None(_) => None,
+        }
     }
 }
 impl TopLevelLanguageElementId for TraitFunctionId {

@@ -88,6 +88,9 @@ impl ConcreteImplId {
     pub fn impl_def_id(&self, db: &dyn SemanticGroup) -> ImplDefId {
         db.lookup_intern_concrete_impl(*self).impl_def_id
     }
+    pub fn generic_args(&self, db: &dyn SemanticGroup) -> Vec<GenericArgumentId> {
+        db.lookup_intern_concrete_impl(*self).generic_args
+    }
     pub fn get_impl_function(
         &self,
         db: &dyn SemanticGroup,
@@ -410,7 +413,8 @@ pub fn priv_impl_definition_data(
     // Ignore the result.
     .ok();
 
-    // TODO(yuval): verify that all functions of `concrete_trait` appear in this impl.
+    // TODO(yuval): verify that all functions of `concrete_trait` either appear in this impl or have
+    // a default implementation.
 
     let mut function_asts = OrderedHashMap::default();
     let mut impl_item_names = OrderedHashSet::default();
@@ -487,12 +491,19 @@ pub fn priv_impl_definition_data(
 
     // It is later verified that all items in this impl match items from `concrete_trait`.
     // To ensure exact match (up to trait functions with default implementation), it is sufficient
-    // to verify here that all items in `concrete_trait` appear in this impl.
-    // TODO(yuval): Once default implementation of trait functions is supported, filter such
-    // functions out.
+    // to verify here that all items in `concrete_trait`, that don't have default implementation,
+    // appear in this impl.
     let trait_item_names = db
         .trait_functions(db.lookup_intern_concrete_trait(concrete_trait).trait_id)?
-        .into_keys()
+        .into_iter()
+        // Filter out trait functions with default implementation.
+        .filter_map(|(trait_function_name, trait_function_id)| {
+            if db.trait_function_body(trait_function_id).unwrap().is_some() {
+                None
+            } else {
+                Some(trait_function_name)
+            }
+        })
         .collect::<OrderedHashSet<_>>();
     let missing_items_in_impl =
         trait_item_names.difference(&impl_item_names).cloned().collect::<Vec<_>>();

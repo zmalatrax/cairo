@@ -34,6 +34,9 @@ pub fn function_declaration_diagnostics(
         FunctionWithBodyId::Impl(impl_function_id) => db
             .priv_impl_function_declaration_data(impl_function_id)
             .map(|x| x.function_declaration_data),
+        FunctionWithBodyId::Trait(trait_function_id) => {
+            db.priv_trait_function_declaration_data(trait_function_id)
+        }
     };
     declaration_data.map(|data| data.diagnostics).unwrap_or_default()
 }
@@ -50,6 +53,9 @@ pub fn function_declaration_inline_config(
         FunctionWithBodyId::Impl(impl_function_id) => {
             db.impl_function_declaration_inline_config(impl_function_id)
         }
+        FunctionWithBodyId::Trait(trait_function_id) => {
+            db.trait_function_declaration_inline_config(trait_function_id)
+        }
     }
 }
 
@@ -65,6 +71,9 @@ pub fn function_declaration_implicit_precedence(
         FunctionWithBodyId::Impl(impl_function_id) => {
             db.impl_function_declaration_implicit_precedence(impl_function_id)
         }
+        FunctionWithBodyId::Trait(trait_function_id) => {
+            db.trait_function_declaration_implicit_precedence(trait_function_id)
+        }
     }
 }
 
@@ -76,6 +85,9 @@ pub fn function_with_body_signature(
     match function_id {
         FunctionWithBodyId::Free(free_function_id) => db.free_function_signature(free_function_id),
         FunctionWithBodyId::Impl(impl_function_id) => db.impl_function_signature(impl_function_id),
+        FunctionWithBodyId::Trait(trait_function_id) => {
+            db.trait_function_signature(trait_function_id)
+        }
     }
 }
 
@@ -94,6 +106,11 @@ pub fn function_with_body_generic_params(
             res.extend(db.impl_function_generic_params(impl_function_id)?);
             Ok(res)
         }
+        FunctionWithBodyId::Trait(trait_function_id) => {
+            let mut res = db.trait_generic_params(trait_function_id.trait_id(db.upcast()))?;
+            res.extend(db.trait_function_generic_params(trait_function_id)?);
+            Ok(res)
+        }
     }
 }
 
@@ -110,6 +127,9 @@ pub fn function_with_body_attributes(
             .priv_impl_function_declaration_data(impl_function_id)?
             .function_declaration_data
             .attributes),
+        FunctionWithBodyId::Trait(trait_function_id) => {
+            Ok(db.priv_trait_function_declaration_data(trait_function_id)?.attributes)
+        }
     }
 }
 
@@ -146,6 +166,10 @@ pub fn function_body_diagnostics(
         FunctionWithBodyId::Impl(impl_function_id) => {
             db.priv_impl_function_body_data(impl_function_id)
         }
+        FunctionWithBodyId::Trait(trait_function_id) => {
+            // Trait function must have a body if used in FunctionWithBodyId::Trait.
+            db.priv_trait_function_body_data(trait_function_id).map(|body| body.unwrap())
+        }
     };
     body_data.map(|data| data.diagnostics).unwrap_or_default()
 }
@@ -169,6 +193,14 @@ pub fn function_body(
         }
         FunctionWithBodyId::Impl(impl_function_id) => {
             Ok(db.priv_impl_function_body_data(impl_function_id)?.body)
+        }
+        FunctionWithBodyId::Trait(trait_function_id) => {
+            // TODO(ygg): maybe remove the constraint of FunctionWithBodyId::Trait having a body.
+            // Lookup for the impls here(???). If there is one, and it has an implementation for the
+            // function, use it. If not, use the default implementation in the trait, if it exists.
+
+            // Trait function must have a body if used in FunctionWithBodyId::Trait.
+            Ok(db.priv_trait_function_body_data(trait_function_id)?.unwrap().body)
         }
     }
 }
@@ -205,6 +237,12 @@ pub trait SemanticExprLookup<'a>: Upcast<dyn SemanticGroup + 'a> {
             }
             FunctionWithBodyId::Impl(impl_function_id) => {
                 self.upcast().priv_impl_function_body_data(impl_function_id)
+            }
+            FunctionWithBodyId::Trait(trait_function_id) => {
+                self.upcast()
+                    .priv_trait_function_body_data(trait_function_id)
+                    // Trait function must have a body if used in FunctionWithBodyId::Trait.
+                    .map(|body| body.unwrap())
             }
         };
         body_data?.expr_lookup.get(&ptr).copied().to_maybe()

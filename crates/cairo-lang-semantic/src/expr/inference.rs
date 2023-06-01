@@ -25,6 +25,7 @@ use crate::items::constant::Constant;
 use crate::items::functions::{
     ConcreteFunctionWithBody, ConcreteFunctionWithBodyId, GenericFunctionId,
     GenericFunctionWithBodyId, ImplGenericFunctionId, ImplGenericFunctionWithBodyId,
+    TraitGenericFunctionId, TraitGenericFunctionWithBodyId,
 };
 use crate::items::generics::{GenericParamConst, GenericParamImpl, GenericParamType};
 use crate::items::imp::{
@@ -104,6 +105,7 @@ impl InferenceError {
             InferenceError::ConstInferenceNotSupported => {
                 "Const generic inference not yet supported.".into()
             }
+            // TODO(yg): should this error happen if the function is default implemented?
             InferenceError::NoImplsFound { concrete_trait_id } => {
                 format!("Trait has no implementation in context: {:?}", concrete_trait_id.debug(db))
             }
