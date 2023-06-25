@@ -243,6 +243,7 @@ fn build_array_slice(
         tempvar array_length_in_cells = arr_end - arr_start;
         tempvar slice_end = slice_start + slice_length;
     };
+    // TODO: working with pointers should probably save one instruction.
     let slice_end_in_cells = if element_size == 1 {
         slice_end
     } else {

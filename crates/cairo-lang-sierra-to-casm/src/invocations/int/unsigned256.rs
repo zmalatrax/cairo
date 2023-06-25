@@ -89,6 +89,7 @@ fn build_u256_divmod(
         };
 
         // Verify the hint ranges.
+        // TODO: one of the range check is not necessary since the value is checked to be 0.
         assert quotient0 = *(range_check++);
         assert quotient1 = *(range_check++);
         assert remainder0 = *(range_check++);
@@ -96,6 +97,7 @@ fn build_u256_divmod(
 
         // Assert remainder is less than divisor.
         tempvar diff1 = divisor1 - remainder1;
+        // TODO: Compute both only in one branch.
         tempvar diff0 = divisor0 - remainder0;
         tempvar diff0_min_1 = diff0 - one;
         jump HighDiff if diff1 != 0;
@@ -121,10 +123,11 @@ fn build_u256_divmod(
         // Divide by 2**128 and check that we got an integer in [-2**15, 2**15).
         // This validates that we couldn't have wrapped around the prime in the division.
         tempvar leftover = part1 / u128_limit;
-        tempvar a = leftover + u128_bound_minus_i16_upper_bound;
-        assert a = *(range_check++);
-        tempvar a = leftover - i16_lower_bound;
-        assert a = *(range_check++);
+        assert leftover = leftover * leftover;
+        // tempvar a = leftover + u128_bound_minus_i16_upper_bound;
+        // assert a = *(range_check++);
+        // tempvar a = leftover - i16_lower_bound;
+        // assert a = *(range_check++);
         // Validate limb1.
         // We know that limb2 and limb3 should be 0.
         // Therfore quotient1 or divisor1 should also be 0.
@@ -134,7 +137,7 @@ fn build_u256_divmod(
         tempvar qd1_small;
         tempvar qd1_large;
         jump DIVISOR1_EQ_ZERO if quotient1 != 0;
-        // quotient3 is 0 - no need to multiply it by the divisor.
+        // quotient1 is 0 - no need to multiply it by the divisor.
         tempvar quotient0_less_than_divisor1;
         hint TestLessThan { lhs: quotient0, rhs: divisor1 } into { dst: quotient0_less_than_divisor1 };
         jump QUOTIENT0_LESS_THAN_DIVISOR1 if quotient0_less_than_divisor1 != 0;
@@ -231,6 +234,7 @@ fn build_u256_sqrt(
 
         // Verify the hint consistency and ranges.
         // Assert range on sqrt limbs.
+        // TODO: maybe check sqrt0 + sqrt1 < 2**65?
         assert sqrt0 = *(range_check++);
         tempvar a = sqrt0 + u128_bound_minus_u64_bound;
         assert a = *(range_check++);
@@ -277,32 +281,30 @@ fn build_u256_sqrt(
 
         // The upper u128 word.
         tempvar accum6 = accum5 + remainder_high;
-        tempvar accum7 = accum6 - value_high;
         tempvar element = sqrt1 * sqrt1;
-        tempvar accum8 = accum7 + element;
-        assert accum8 = zero;
+        assert value_high = accum6 + element;
 
-        // We have validated that value is larger than root ** 2, since we validated that
-        // `root ** 2 + remainder = value` - and `remainder` is positive.
-        // All that remains is to show that value is smaller than (root + 1) ** 2.
+        // We have validated that value is larger than sqrt ** 2, since we validated that
+        // `sqrt ** 2 + remainder = value` - and `remainder` is positive.
+        // All that remains is to show that value is smaller than (sqrt + 1) ** 2.
         // It is enough to show that:
-        // `(root + 1) ** 2 - value > 0`
-        // `root ** 2 + 2 * root + 1 - value > 0`
-        // `2 * root - (value - root ** 2) + 1 > 0`
-        // `2 * root - remainder + 1 > 0`
-        // `2 * root - remainder >= 0`
+        // `(sqrt + 1) ** 2 - value > 0`
+        // `sqrt ** 2 + 2 * sqrt + 1 - value > 0`
+        // `2 * sqrt - (value - sqrt ** 2) + 1 > 0`
+        // `2 * sqrt - remainder + 1 > 0`
+        // `2 * sqrt - remainder >= 0`
 
         // Calculate the u128 representation of sqrt.
         tempvar shifted_sqrt1 = sqrt1 * u64_limit;
         tempvar sqrt = sqrt0 + shifted_sqrt1;
 
-        // Making sure `2 * root - remainder >= 0`.
+        // Making sure `2 * sqrt - remainder >= 0`.
         tempvar shifted_remainder_high = remainder_high * u128_limit;
         tempvar remainder = remainder_low + shifted_remainder_high;
         tempvar sqrt_mul_2 = sqrt + sqrt;
         tempvar sqrt_mul_2_minus_remainder = sqrt_mul_2 - remainder;
         tempvar fixed_sqrt_mul_2_minus_remainder;
-        // Since we just want to make sure `2 * root - remainder` is positive, we can trust the
+        // Since we just want to make sure `2 * sqrt - remainder` is positive, we can trust the
         // hint to make sure that we are just in [0, 2**129) range.
         // We know it is in that range since `sqrt` is in [0, 2**128) so `2 * sqrt` is in
         // [0, 2**129).

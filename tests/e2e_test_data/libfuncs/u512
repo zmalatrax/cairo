@@ -84,18 +84,21 @@ jmp rel 6 if [ap + 0] != 0, ap++;
 jmp rel 4;
 [ap + -3] = [ap + -40];
 [ap + -2] = [fp + -4];
+
 [ap + 0] = [ap + -3] + 340282366920938463444927863358058659840, ap++;
 [ap + -1] = [[fp + -9] + 13];
 [ap + 0] = [ap + -4] * [ap + -3], ap++;
 [ap + 0] = [ap + -8] + [ap + -27], ap++;
 [ap + 0] = [ap + -1] + [ap + -30], ap++;
 [fp + -5] = [ap + -1] + [ap + -3];
+
 [ap + 0] = [fp + -9] + 14, ap++;
 [ap + 0] = [ap + -46], ap++;
 [ap + 0] = [fp + -4], ap++;
 [ap + 0] = [ap + -32], ap++;
 [ap + 0] = [ap + -34], ap++;
 call rel 38;
+// TODO: Why did the compiler add the following line (it's unnecessary).
 [ap + 0] = [ap + -1], ap++;
 [ap + 0] = [ap + -70], ap++;
 [ap + 0] = [fp + -3], ap++;

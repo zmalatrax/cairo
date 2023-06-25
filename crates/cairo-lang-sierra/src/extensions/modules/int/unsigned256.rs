@@ -64,8 +64,11 @@ impl NoGenericArgsGenericLibfunc for Uint256DivmodLibfunc {
     ) -> Result<LibfuncSignature, SpecializationError> {
         let u256_type = get_u256_type(context)?;
         let range_check_type = context.get_concrete_type(RangeCheckType::id(), &[])?;
-        let simple_deref_u256_output_info =
-            OutputVarInfo { ty: u256_type.clone(), ref_info: OutputVarReferenceInfo::SimpleDerefs };
+        let simple_deref_u256_output_info = OutputVarInfo {
+            ty: u256_type.clone(),
+            // TODO: Why not tempvar?
+            ref_info: OutputVarReferenceInfo::SimpleDerefs
+        };
         Ok(LibfuncSignature::new_non_branch_ex(
             vec![
                 ParamSignature::new(range_check_type.clone()).with_allow_add_const(),
@@ -78,6 +81,7 @@ impl NoGenericArgsGenericLibfunc for Uint256DivmodLibfunc {
                 simple_deref_u256_output_info,
                 OutputVarInfo {
                     ty: context.get_concrete_type(U128MulGuaranteeType::id(), &[])?,
+                    // TODO: Why not tempvar?
                     ref_info: OutputVarReferenceInfo::SimpleDerefs,
                 },
             ],
@@ -106,6 +110,7 @@ impl NoGenericArgsGenericLibfunc for Uint256SquareRootLibfunc {
                 OutputVarInfo::new_builtin(range_check_type, 0),
                 OutputVarInfo {
                     ty: context.get_concrete_type(Uint128Type::id(), &[])?,
+                    // TODO: Why not tempvar?
                     ref_info: OutputVarReferenceInfo::SimpleDerefs,
                 },
             ],

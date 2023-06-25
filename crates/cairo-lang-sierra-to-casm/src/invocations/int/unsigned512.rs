@@ -83,6 +83,7 @@ fn build_u512_safe_divmod_by_u256(
 
         // Assert remainder is less than divisor.
         tempvar diff1 = divisor1 - remainder1;
+        // TODO: Compute both only in one branch.
         tempvar diff0 = divisor0 - remainder0;
         tempvar diff0_min_1 = diff0 - one;
         jump HighDiff if diff1 != 0;
@@ -94,6 +95,7 @@ fn build_u512_safe_divmod_by_u256(
     }
     // Do basic calculations.
     casm_build_extend! {casm_builder,
+        // TODO: explain why ap += 10.
         ap += 10;
         tempvar q0d0_low;
         tempvar q0d0_high;
@@ -101,9 +103,12 @@ fn build_u512_safe_divmod_by_u256(
         tempvar q1d0_low;
         tempvar q1d0_high;
         hint WideMul128 { lhs: quotient1, rhs: divisor0 } into { low: q1d0_low, high: q1d0_high };
+        // TODO: Consider returning option guarantee (if d1=0), or to add a special case in
+        //   guarantee (where the second input is zero) to improve this.
         tempvar q0d1_low;
         tempvar q0d1_high;
         hint WideMul128 { lhs: quotient0, rhs: divisor1 } into { low: q0d1_low, high: q0d1_high };
+        // TODO: Same here.
         tempvar q1d1_low;
         tempvar q1d1_high;
         hint WideMul128 { lhs: quotient1, rhs: divisor1 } into { low: q1d1_low, high: q1d1_high };
@@ -117,6 +122,7 @@ fn build_u512_safe_divmod_by_u256(
         tempvar part0 = q0d0_low + remainder0;
         tempvar part1 = part0 - dividend0;
         tempvar leftover = part1 / u128_limit;
+        // TODO: leftover is either 0 or 1.
         tempvar a = leftover + u128_bound_minus_i16_upper_bound;
         assert a = *(range_check++);
         tempvar a = leftover - i16_lower_bound;
@@ -128,6 +134,8 @@ fn build_u512_safe_divmod_by_u256(
         tempvar part3 = part2 + remainder1;
         tempvar part4 = part3 - dividend1;
         tempvar leftover = part4 / u128_limit;
+        // TODO: leftover cannot be negative.
+        // TODO: can be done with 4 opcodes and no range checks using two bits.
         tempvar a = leftover + u128_bound_minus_i16_upper_bound;
         assert a = *(range_check++);
         tempvar a = leftover - i16_lower_bound;
@@ -139,15 +147,19 @@ fn build_u512_safe_divmod_by_u256(
         tempvar part3 = part2 + q2d0_low;
         tempvar part4 = part3 - dividend2;
         tempvar leftover = part4 / u128_limit;
+        // leftover cannot be negative.
+        // Probably can be done with 2 bits as well.
         tempvar a = leftover + u128_bound_minus_i16_upper_bound;
         assert a = *(range_check++);
         tempvar a = leftover - i16_lower_bound;
         assert a = *(range_check++);
         // Validate limb3.
-        // We know that limb4 and limb5 should be 0.
-        // Therfore quotient3 or divisor1 should also be 0.
-        // We also know that quotient2*divisor1 and quotient3*divisor0 should be smaller than 2**128.
-        // Therefore the smaller of each pair must be smaller than 2**64.
+        // Because quotient * divisor + remainder = dividend < 2**512,
+        // either quotient3 or divisor1 should be 0.
+        // We also know that quotient2 * divisor1 and quotient3 * divisor0 should be smaller
+        // than 2**128.
+        // Therefore the smaller value from each pair must be smaller than 2**64.
+        // Note that the other pair is zero.
         // So by checking this we can avoid wraparound on the prime.
         tempvar qd3_small;
         tempvar qd3_large;

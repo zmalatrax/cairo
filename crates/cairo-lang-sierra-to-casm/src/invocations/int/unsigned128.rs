@@ -468,6 +468,8 @@ pub fn build_u128_byte_reverse(
     // two 64-bit words.
 
     // Right align the value.
+    // TODO: instead of dividing using an instruction, return a deferred value with `* inverse`.
+    // inverse = -0x800000000000011000000000000000000.
     let shift = 1_u128 << (8 + 16 + 32 + 64);
     casm_build_extend! {casm_builder,
         const shift_imm = shift;
