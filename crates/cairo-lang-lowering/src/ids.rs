@@ -8,6 +8,7 @@ use defs::diagnostic_utils::StableLocation;
 use defs::ids::{FreeFunctionId, LanguageElementId};
 use semantic::substitution::{GenericSubstitution, SubstitutionRewriter};
 use semantic::{ExprVar, Mutability};
+use smol_str::SmolStr;
 use {cairo_lang_defs as defs, cairo_lang_semantic as semantic};
 
 use crate::db::LoweringGroup;
@@ -234,13 +235,22 @@ impl FunctionLongId {
             FunctionLongId::Generated(generated) => generated.body(db).signature(db),
         }
     }
+    pub fn name(&self, db: &dyn LoweringGroup) -> Option<SmolStr> {
+        match self {
+            FunctionLongId::Semantic(semantic) => Some(semantic.name(db.upcast())),
+            FunctionLongId::Generated(_) => None,
+        }
+    }
 }
 impl FunctionId {
     pub fn body(&self, db: &dyn LoweringGroup) -> Maybe<Option<ConcreteFunctionWithBodyId>> {
-        db.lookup_intern_lowering_function(*self).body(db)
+        self.lookup(db).body(db)
     }
     pub fn signature(&self, db: &dyn LoweringGroup) -> Maybe<Signature> {
-        db.lookup_intern_lowering_function(*self).signature(db)
+        self.lookup(db).signature(db)
+    }
+    pub fn name(&self, db: &dyn LoweringGroup) -> Option<SmolStr> {
+        self.lookup(db).name(db)
     }
     pub fn lookup(&self, db: &dyn LoweringGroup) -> FunctionLongId {
         db.lookup_intern_lowering_function(*self)

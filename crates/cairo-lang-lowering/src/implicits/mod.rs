@@ -5,14 +5,14 @@ use cairo_lang_defs::ids::LanguageElementId;
 use cairo_lang_diagnostics::Maybe;
 use cairo_lang_semantic as semantic;
 use cairo_lang_semantic::db::SemanticGroup;
-use cairo_lang_utils::Upcast;
+use cairo_lang_utils::{try_extract_matches, Upcast};
 use itertools::{chain, zip_eq, Itertools};
 use semantic::TypeId;
 
 use crate::blocks::Blocks;
 use crate::db::{ConcreteSCCRepresentative, LoweringGroup};
 use crate::graph_algorithms::strongly_connected_components::concrete_function_with_body_postpanic_scc;
-use crate::ids::{ConcreteFunctionWithBodyId, FunctionId, LocationId};
+use crate::ids::{ConcreteFunctionWithBodyId, FunctionId, FunctionLongId, LocationId};
 use crate::lower::context::{VarRequest, VariableAllocator};
 use crate::{BlockId, FlatBlockEnd, FlatLowered, MatchArm, MatchInfo, Statement, VariableId};
 
@@ -60,6 +60,22 @@ pub fn inner_lower_implicits(
     )?;
 
     let implicits_tys = db.function_with_body_implicits(function_id)?;
+    // TODO(yg): maybe move this to the computation in function_with_body_implicits.
+    let generic_function_id =
+        try_extract_matches!(function_id.function_id(db)?.lookup(db), FunctionLongId::Semantic)
+            .unwrap()
+            .lookup(db.upcast())
+            .function
+            .generic_function; // TODO(yg): change unwrap.
+    let signature_implicits = db.generic_function_declaration_implicits(generic_function_id)?;
+    println!("yg signature implicits: {:?}", signature_implicits);
+    println!("yg used implicits: {:?}", implicits_tys);
+    if HashSet::<TypeId>::from_iter(signature_implicits.into_iter())
+        != HashSet::from_iter(implicits_tys.clone().into_iter())
+    {
+        // TODO(yg): report diagnostic.
+        println!("yg diagnostic!");
+    }
 
     let implicit_index =
         HashMap::from_iter(implicits_tys.iter().enumerate().map(|(i, ty)| (*ty, i)));
@@ -106,7 +122,9 @@ fn lower_block_implicits(ctx: &mut Context<'_>, block_id: BlockId) -> Maybe<()> 
         .or_insert_with(|| alloc_implicits(ctx.variables, &ctx.implicits_tys, ctx.location))
         .clone();
     for statement in &mut ctx.lowered.blocks[block_id].statements {
+        println!("yg statement");
         if let Statement::Call(stmt) = statement {
+            println!("yg statement call");
             let callee_implicits = ctx.db.function_implicits(stmt.function)?;
             let indices = callee_implicits.iter().map(|ty| ctx.implicit_index[ty]).collect_vec();
             let implicit_input_vars = indices.iter().map(|i| implicits[*i]);
@@ -191,15 +209,26 @@ fn lower_block_implicits(ctx: &mut Context<'_>, block_id: BlockId) -> Maybe<()> 
 
 /// Query implementation of [crate::db::LoweringGroup::function_implicits].
 pub fn function_implicits(db: &dyn LoweringGroup, function: FunctionId) -> Maybe<Vec<TypeId>> {
+    println!("yg function_implicits, function: {:?}", function.name(db).unwrap());
     if let Some(body) = function.body(db.upcast())? {
-        return db.function_with_body_implicits(body);
+        println!("yg function_implicits with body");
+        let used_implicits = db.function_with_body_implicits(body);
+        if HashSet::<TypeId>::from_iter(function.signature(db)?.implicits.into_iter())
+            != HashSet::from_iter(used_implicits.clone()?.into_iter())
+        {
+            // TODO(yg): report diagnostic.
+            println!("yg diagnostic!!!");
+            return Err(());
+        }
+        // TODO(ygg)
+        return used_implicits;
     }
     Ok(function.signature(db)?.implicits)
 }
 
 /// A trait to add helper methods in [LoweringGroup].
 pub trait FunctionImplicitsTrait<'a>: Upcast<dyn LoweringGroup + 'a> {
-    /// Returns all the implicitis used by a [ConcreteFunctionWithBodyId].
+    /// Returns all the implicits used by a [ConcreteFunctionWithBodyId].
     fn function_with_body_implicits(
         &self,
         function: ConcreteFunctionWithBodyId,

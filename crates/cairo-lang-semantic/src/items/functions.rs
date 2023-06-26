@@ -193,7 +193,11 @@ impl FunctionId {
     }
 
     pub fn name(&self, db: &dyn SemanticGroup) -> SmolStr {
-        format!("{:?}", self.get_concrete(db)).into()
+        self.get_concrete(db).name(db)
+    }
+
+    pub fn lookup(&self, db: &dyn SemanticGroup) -> FunctionLongId {
+        db.lookup_intern_function(*self)
     }
 }
 
@@ -479,6 +483,9 @@ impl ConcreteFunction {
             generic_function,
             generic_args: self.generic_args.clone(),
         })))
+    }
+    pub fn name(&self, db: &dyn SemanticGroup) -> SmolStr {
+        self.generic_function.name(db.upcast())
     }
 }
 impl DebugWithDb<dyn SemanticGroup> for ConcreteFunction {
@@ -795,5 +802,17 @@ impl ImplicitPrecedence {
 impl FromIterator<TypeId> for ImplicitPrecedence {
     fn from_iter<T: IntoIterator<Item = TypeId>>(iter: T) -> Self {
         Self(Vec::from_iter(iter))
+    }
+}
+
+/// Query implementation of [crate::db::SemanticGroup::generic_function_declaration_implicits].
+pub fn generic_function_declaration_implicits(
+    db: &dyn SemanticGroup,
+    generic_function_id: GenericFunctionId,
+) -> Maybe<Vec<TypeId>> {
+    match generic_function_id {
+        GenericFunctionId::Free(id) => db.free_function_declaration_implicits(id),
+        GenericFunctionId::Extern(id) => db.extern_function_declaration_implicits(id),
+        GenericFunctionId::Impl(id) => db.trait_function_declaration_implicits(id.function),
     }
 }

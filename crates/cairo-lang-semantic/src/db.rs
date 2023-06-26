@@ -24,7 +24,7 @@ use crate::diagnostic::SemanticDiagnosticKind;
 use crate::expr::inference::{self, ImplVar, ImplVarId};
 use crate::items::constant::Constant;
 use crate::items::function_with_body::FunctionBody;
-use crate::items::functions::{ImplicitPrecedence, InlineConfiguration};
+use crate::items::functions::{GenericFunctionId, ImplicitPrecedence, InlineConfiguration};
 use crate::items::generics::GenericParam;
 use crate::items::imp::{ImplGenericParamsData, ImplId, ImplLookupContext, UninferredImpl};
 use crate::items::module::ModuleSemanticData;
@@ -905,6 +905,13 @@ pub trait SemanticGroup:
         crate_id: CrateId,
         type_filter: lsp_helpers::TypeFilter,
     ) -> Vec<TraitFunctionId>;
+
+    /// Returns the explicit implicits of a signature of a generic function.
+    #[salsa::invoke(items::functions::generic_function_declaration_implicits)]
+    fn generic_function_declaration_implicits(
+        &self,
+        generic_function_id: GenericFunctionId,
+    ) -> Maybe<Vec<TypeId>>;
 }
 
 impl<T: Upcast<dyn SemanticGroup + 'static>> Elongate for T {
