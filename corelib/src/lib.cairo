@@ -50,7 +50,7 @@ extern fn bool_not_impl(a: bool) -> (bool, ) implicits() nopanic;
 #[inline(always)]
 impl BoolNot of Not<bool> {
     #[inline(always)]
-    fn not(a: bool) -> bool implicits() nopanic {
+    fn not(a: bool) -> bool nopanic {
         let (r, ) = bool_not_impl(a);
         r
     }
