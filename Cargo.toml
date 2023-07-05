@@ -57,8 +57,8 @@ ark-secp256r1 = "0.4.0"
 ark-std = "0.3.0"
 assert_matches = "1.5"
 bimap = "0.6.2"
-cairo-felt = "0.6"
-cairo-vm = "0.6"
+cairo-felt = { git = "https://github.com/lambdaclass/cairo-vm", rev = "29fcff9d" }
+cairo-vm = { git = "https://github.com/lambdaclass/cairo-vm", rev = "29fcff9d" }
 clap = { version = "4.0", features = ["derive"] }
 colored = "2"
 const-fnv1a-hash = "1.1.0"
