@@ -92,7 +92,7 @@ pub fn handle_trait(db: &dyn SyntaxGroup, trait_ast: ast::ItemTrait) -> PluginRe
                         skip_generation = true;
 
                         diagnostics.push(PluginDiagnostic {
-                            message: "`ref` parameters are not supported in the ABI of a contract."
+                            message: "`ref` parameters are not supported in a starknet interface."
                                 .to_string(),
                             stable_ptr: param.modifiers(db).stable_ptr().untyped(),
                         })

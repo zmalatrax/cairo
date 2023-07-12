@@ -396,12 +396,12 @@ impl StorageAccessIContractSafeDispatcher of starknet::StorageAccess::<IContract
 }
 
 //! > expected_diagnostics
-error: Plugin diagnostic: `ref` parameters are not supported in the ABI of a contract.
+error: Plugin diagnostic: `ref` parameters are not supported in a starknet interface.
  --> lib.cairo:7:29
     fn bad_sig(ref self: T, ref arg1: felt252, ref arg2: felt252) -> felt252;
                             ^*^
 
-error: Plugin diagnostic: `ref` parameters are not supported in the ABI of a contract.
+error: Plugin diagnostic: `ref` parameters are not supported in a starknet interface.
  --> lib.cairo:7:48
     fn bad_sig(ref self: T, ref arg1: felt252, ref arg2: felt252) -> felt252;
                                                ^*^
