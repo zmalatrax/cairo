@@ -10,7 +10,6 @@ use std::sync::Arc;
 use anyhow::{bail, Error};
 use cairo_lang_compiler::db::RootDatabase;
 use cairo_lang_compiler::project::{setup_project, update_crate_roots_from_project_config};
-use cairo_lang_debug::DebugWithDb;
 use cairo_lang_defs::db::{get_all_path_leafs, DefsGroup};
 use cairo_lang_defs::ids::{
     ConstantLongId, EnumLongId, ExternFunctionLongId, ExternTypeLongId, FileIndex,
@@ -25,7 +24,7 @@ use cairo_lang_filesystem::db::{
 };
 use cairo_lang_filesystem::detect::detect_corelib;
 use cairo_lang_filesystem::ids::{CrateLongId, Directory, FileId, FileLongId};
-use cairo_lang_filesystem::span::{TextPosition, TextWidth};
+use cairo_lang_filesystem::span::{FileSummary, TextOffset, TextPosition, TextWidth};
 use cairo_lang_formatter::{get_formatted_file, FormatterConfig};
 use cairo_lang_lowering::db::LoweringGroup;
 use cairo_lang_lowering::diagnostic::LoweringDiagnostic;
@@ -585,12 +584,22 @@ impl LanguageServer for Backend {
             let text_document_position = params.text_document_position;
             let file_uri = text_document_position.text_document.uri;
             eprintln!("Complete {file_uri}");
-            let file = file(db, file_uri);
+            let file = file(db, file_uri.clone());
             let position = text_document_position.position;
+            // Get file summary and content.
+            let file_summary = db.file_summary(file).on_none(|| {
+                eprintln!("Completion failed. File '{file_uri}' does not exist.");
+            })?;
+            let content = db.file_content(file).on_none(|| {
+                eprintln!("Completion failed. File '{file_uri}' does not exist.");
+            })?;
+            let offset = position_to_offset(file_summary, position, &content)?;
+            if offset - TextOffset::default() == TextWidth::default() {
+                return None;
+            }
+            let offset = offset.sub_width(TextWidth::from_char('.'));
 
-            let completions = if params.context.and_then(|x| x.trigger_character).map(|x| x == *".")
-                == Some(true)
-            {
+            let completions = if offset.take_from(&content).starts_with('.') {
                 dot_completions(db, file, position)
             } else {
                 Some(vec![])
@@ -718,18 +727,15 @@ impl LanguageServer for Backend {
             let file = file(db, file_uri.clone());
             let position = params.text_document_position_params.position;
             let Some((node, lookup_items)) = get_node_and_lookup_items(db, file, position) else {return None};
-            eprintln!("Goto definition 1");
             for lookup_item_id in lookup_items {
                 if node.kind(syntax_db) != SyntaxKind::TokenIdentifier {
                     continue;
                 }
                 let identifier =
                 ast::TerminalIdentifier::from_syntax_node(syntax_db, node.parent().unwrap());
-                eprintln!("Goto definition A: {file_uri} {}", identifier.as_syntax_node().get_text_without_trivia(db));
                 let Some(item) = db.lookup_resolved_generic_item_by_ptr(
                     lookup_item_id, identifier.stable_ptr())
                 else { continue; };
-                eprintln!("Goto definition B: {file_uri} {:?}", item.debug(db));
 
                 let defs_db = db.upcast();
                 let (module_id, file_index, stable_ptr) = match item {
@@ -931,16 +937,7 @@ fn get_node_and_lookup_items(
     })?;
 
     // Find offset for position.
-    let mut offset = *file_summary.line_offsets.get(position.line as usize).on_none(|| {
-        eprintln!("Hover failed. Position out of bounds.");
-    })?;
-    let mut chars_it = offset.take_from(&content).chars();
-    for _ in 0..position.character {
-        let c = chars_it.next().on_none(|| {
-            eprintln!("Position does not exist.");
-        })?;
-        offset = offset.add_width(TextWidth::from_char(c));
-    }
+    let offset = position_to_offset(file_summary, position, &content)?;
     let node = syntax.as_syntax_node().lookup_offset(syntax_db, offset);
 
     // Find module.
@@ -963,6 +960,24 @@ fn get_node_and_lookup_items(
             None => return Some((node, res)),
         }
     }
+}
+
+fn position_to_offset(
+    file_summary: Arc<FileSummary>,
+    position: Position,
+    content: &str,
+) -> Option<TextOffset> {
+    let mut offset = *file_summary.line_offsets.get(position.line as usize).on_none(|| {
+        eprintln!("Hover failed. Position out of bounds.");
+    })?;
+    let mut chars_it = offset.take_from(content).chars();
+    for _ in 0..position.character {
+        let c = chars_it.next().on_none(|| {
+            eprintln!("Position does not exist.");
+        })?;
+        offset = offset.add_width(TextWidth::from_char(c));
+    }
+    Some(offset)
 }
 
 fn find_node_module(
@@ -1040,6 +1055,38 @@ fn nearest_semantic_expr(
             {
                 let semantic_expr = db.expr_semantic(function_id, expr_id);
                 return Some(semantic_expr);
+            }
+        }
+        node = node.parent()?;
+    }
+}
+
+/// If the node is a pattern, retrieves a hover hint for it.
+fn get_pattern_hint(
+    db: &(dyn SemanticGroup + 'static),
+    function_id: FunctionWithBodyId,
+    node: SyntaxNode,
+) -> Option<String> {
+    let semantic_pattern = nearest_semantic_pattern(db, node, function_id)?;
+    // Format the hover text.
+    Some(format!("Type: `{}`", semantic_pattern.ty().format(db)))
+}
+
+/// Returns the semantic pattern for the current node.
+fn nearest_semantic_pattern(
+    db: &dyn SemanticGroup,
+    mut node: SyntaxNode,
+    function_id: FunctionWithBodyId,
+) -> Option<cairo_lang_semantic::Expr> {
+    loop {
+        let syntax_db = db.upcast();
+        if ast::Pattern::is_variant(node.kind(syntax_db)) {
+            let pattern_node = ast::Pattern::from_syntax_node(syntax_db, node.clone());
+            if let Some(pattern_id) =
+                db.lookup_pattern_by_ptr(function_id, pattern_node.stable_ptr()).to_option()
+            {
+                let semantic_pattern = db.pattern_semantic(function_id, pattern_id);
+                return Some(semantic_pattern);
             }
         }
         node = node.parent()?;
