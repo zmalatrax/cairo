@@ -11,6 +11,7 @@ use super::pattern::Pattern;
 use crate::items::imp::ImplId;
 use crate::{semantic, ConcreteStructId, FunctionId, TypeId};
 
+pub type PatternId = Id<Pattern>;
 pub type ExprId = Id<Expr>;
 pub type StatementId = Id<Statement>;
 
@@ -69,7 +70,7 @@ pub struct StatementExpr {
 #[derive(Clone, Debug, Hash, PartialEq, Eq, DebugWithDb, SemanticObject)]
 #[debug_db(ExprFormatter<'a>)]
 pub struct StatementLet {
-    pub pattern: Pattern,
+    pub pattern: PatternId,
     pub expr: ExprId,
     #[hide_field_debug_with_db]
     #[dont_rewrite]
@@ -324,7 +325,7 @@ pub struct ExprIf {
 #[derive(Clone, Debug, Hash, PartialEq, Eq, DebugWithDb, SemanticObject)]
 #[debug_db(ExprFormatter<'a>)]
 pub struct MatchArm {
-    pub pattern: Pattern,
+    pub pattern: PatternId,
     pub expression: ExprId,
 }
 
