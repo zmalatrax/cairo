@@ -789,6 +789,5 @@ define_language_element_id_as_enum! {
         TraitFunction(TraitFunctionId),
         // TODO(spapini): Replace with ImplItemId.
         ImplFunction(ImplFunctionId),
-        TraitFunction(TraitFunctionId),
     }
 }
