@@ -120,6 +120,13 @@
     ],
     "description": "Creates a trait"
   },
+  "Storage mapping": {
+    "prefix": "mapping",
+    "body": [
+      "$1: LegacyMap<$2, $3>,"
+    ],
+    "description": "Storage mapping"
+  },
   "Print the selected item": {
     "prefix": "print",
     "body": [
@@ -142,7 +149,7 @@
     "prefix": "test",
     "body": [
       "#[test]",
-      "#[available_gas(2000000)]",
+      "#[available_gas(20000000)]",
       "fn test_$1() {",
       "\t$2",
       "\tassert($3, '$4');",
