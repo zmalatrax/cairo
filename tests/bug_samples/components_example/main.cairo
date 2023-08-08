@@ -2,11 +2,13 @@
 mod MyContract {
     use starknet::ContractAddress;
     use hello_scarb::interfaces::IOwnable;
-    use hello_scarb::a::a;
+    #[component(storage = a, event = A)]
+    use hello_scarb::a::a as a;
 
     #[storage]
-    struct Storage { // #[nested(v0)]
-    // a: A::Storage,
+    struct Storage { 
+        #[nested(v0)]
+        a: A::Storage,
     }
 
     #[event]
@@ -20,16 +22,24 @@ mod MyContract {
         }
     }
 
-    //component!(name=a, storage=a, event=A)
+    // autogen ContractState.
+    #[derive(Drop)]
+    struct ContractState {
+        a: a::ContractState,
+    }
+    #[inline(always)]
+    fn unsafe_new_contract_state() -> ContractState {
+        ContractState { a: a::unsafe_new_component_state(), }
+    }
+
     // autogen.
     impl HasComponentaImpl of a::HasComponent<ContractState> {
         fn get_component(self: @ContractState) -> @a::ComponentState<ContractState> {
-            // self.a
-            @a::ComponentState { data: a::DataVar {} }
+            a::unsafe_new_component_state()
         }
         fn get_component_mut(ref self: ContractState) -> a::ComponentState<ContractState> {
             // unsafe something.
-            a::ComponentState { data: a::DataVar {} }
+            self.a.unsafe_new_component_state()
         }
         fn get_contract(self: @a::ComponentState<ContractState>) -> @ContractState {
             @unsafe_new_contract_state()

@@ -20,7 +20,12 @@ mod a {
     // autogen.
     // #[derive(Drop)]
     struct ComponentState<TCS> {
-        data: DataVar, 
+        data: DataVar,
+    }
+    fn unsafe_new_component_state<TCS>() -> ComponentState<TCS> {
+        ComponentState<TCS> {
+            data: DataVar {}
+        }
     }
     impl ComponentStateDrop<TCS> of Drop<ComponentState<TCS>> {}
     #[derive(Drop)]
@@ -36,7 +41,7 @@ mod a {
     #[event]
     #[derive(Drop, starknet::event)]
     enum Event {
-        Log: Log, 
+        Log: Log,
     }
     #[derive(Drop, starknet::event)]
     struct Log {}
@@ -88,4 +93,3 @@ mod a {
         }
     }
 }
-
