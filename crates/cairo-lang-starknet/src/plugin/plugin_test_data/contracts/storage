@@ -185,7 +185,7 @@ contract:
     fn contract_state_for_testing() -> ContractState {
         unsafe_new_contract_state()
     }
-    
+
     use var_felt252::InternalContractMemberStateTrait as var_felt252ContractMemberStateTrait;
     mod var_felt252 {
         use super::inner;
@@ -756,9 +756,108 @@ impl EventIsEvent of starknet::Event<Event> {
         ref keys: Span<felt252>, ref data: Span<felt252>,
     ) -> Option<Event> {
         let selector = *array::SpanTrait::pop_front(ref keys)?;
-        
+
         Option::None
     }
 }
 
 //! > expected_diagnostics
+error: The name `InternalContractStateTrait` is defined multiple times.
+ --> contract:88:23
+        use starknet::InternalContractStateTrait;
+                      ^************************^
+
+error: The name `InternalContractStateTrait` is defined multiple times.
+ --> contract:120:23
+        use starknet::InternalContractStateTrait;
+                      ^************************^
+
+error: The name `InternalContractStateTrait` is defined multiple times.
+ --> contract:152:23
+        use starknet::InternalContractStateTrait;
+                      ^************************^
+
+error: The name `InternalContractStateTrait` is defined multiple times.
+ --> contract:184:23
+        use starknet::InternalContractStateTrait;
+                      ^************************^
+
+error: The name `InternalContractStateTrait` is defined multiple times.
+ --> contract:216:23
+        use starknet::InternalContractStateTrait;
+                      ^************************^
+
+error: The name `InternalContractStateTrait` is defined multiple times.
+ --> contract:248:23
+        use starknet::InternalContractStateTrait;
+                      ^************************^
+
+error: Method `address` not found on type "@test::test_contract::var_felt252::ContractMemberState". Did you import the correct trait and impl?
+ --> contract:71:30
+                        self.address(),
+                             ^*****^
+
+error: Method `address` not found on type "test::test_contract::var_felt252::ContractMemberState". Did you import the correct trait and impl?
+ --> contract:81:30
+                        self.address(),
+                             ^*****^
+
+error: Method `address` not found on type "@test::test_contract::var_u8::ContractMemberState". Did you import the correct trait and impl?
+ --> contract:103:30
+                        self.address(),
+                             ^*****^
+
+error: Method `address` not found on type "test::test_contract::var_u8::ContractMemberState". Did you import the correct trait and impl?
+ --> contract:113:30
+                        self.address(),
+                             ^*****^
+
+error: Method `address` not found on type "@test::test_contract::var_u16::ContractMemberState". Did you import the correct trait and impl?
+ --> contract:135:30
+                        self.address(),
+                             ^*****^
+
+error: Method `address` not found on type "test::test_contract::var_u16::ContractMemberState". Did you import the correct trait and impl?
+ --> contract:145:30
+                        self.address(),
+                             ^*****^
+
+error: Method `address` not found on type "@test::test_contract::var_u32::ContractMemberState". Did you import the correct trait and impl?
+ --> contract:167:30
+                        self.address(),
+                             ^*****^
+
+error: Method `address` not found on type "test::test_contract::var_u32::ContractMemberState". Did you import the correct trait and impl?
+ --> contract:177:30
+                        self.address(),
+                             ^*****^
+
+error: Method `address` not found on type "@test::test_contract::var_u64::ContractMemberState". Did you import the correct trait and impl?
+ --> contract:199:30
+                        self.address(),
+                             ^*****^
+
+error: Method `address` not found on type "test::test_contract::var_u64::ContractMemberState". Did you import the correct trait and impl?
+ --> contract:209:30
+                        self.address(),
+                             ^*****^
+
+error: Method `address` not found on type "@test::test_contract::var_u128::ContractMemberState". Did you import the correct trait and impl?
+ --> contract:231:30
+                        self.address(),
+                             ^*****^
+
+error: Method `address` not found on type "test::test_contract::var_u128::ContractMemberState". Did you import the correct trait and impl?
+ --> contract:241:30
+                        self.address(),
+                             ^*****^
+
+error: Method `address` not found on type "@test::test_contract::var_bool::ContractMemberState". Did you import the correct trait and impl?
+ --> contract:263:30
+                        self.address(),
+                             ^*****^
+
+error: Method `address` not found on type "test::test_contract::var_bool::ContractMemberState". Did you import the correct trait and impl?
+ --> contract:273:30
+                        self.address(),
+                             ^*****^

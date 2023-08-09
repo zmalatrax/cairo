@@ -361,20 +361,20 @@ fn try_extract_mapping_types(
 
 /// Generate getters and setters skeleton for a non-mapping member in the storage struct.
 fn handle_simple_storage_member(address: &str, member_state_name: &str) -> String {
+    // TODO(yg): maybe with the PR that looks on traits of impls in the module, the "use
+    // starknet::InternalContractStateImpl" can be written (with as ...). The improvement in this
+    // case is less generated code.
+    // TODO(yg): test with 2 simple storage vars.
     format!(
         "
-    use $storage_member_name$::Internal{member_state_name}Trait as \
-         $storage_member_name${member_state_name}Trait;
+    impl $storage_member_name$_{member_state_name}Impl = \
+         $storage_member_name$::Internal{member_state_name}Impl;
     mod $storage_member_name$ {{$extra_uses$
         #[derive(Copy, Drop)]
         struct {member_state_name} {{}}
-        trait Internal{member_state_name}Trait {{
-            fn address(self: @{member_state_name}) -> starknet::StorageBaseAddress;
-            fn read(self: @{member_state_name}) -> $type_path$;
-            fn write(ref self: {member_state_name}, value: $type_path$);
-        }}
 
-        impl Internal{member_state_name}Impl of Internal{member_state_name}Trait {{
+        impl Internal{member_state_name}Impl of \
+         starknet::Internal{member_state_name}Trait<ContractMemberState, $type_path$> {{
             fn address(self: @{member_state_name}) -> starknet::StorageBaseAddress {{
                 starknet::storage_base_address_const::<{address}>()
             }}

@@ -1,7 +1,7 @@
 //! > Test expansion of a basic component.
 
 //! > test_runner_name
-ExpandContractTestRunner(allow_diagnostics: false)
+ExpandContractTestRunner(allow_diagnostics: true)
 
 //! > cairo_code
 #[derive(Drop, starknet::Store)]
@@ -170,7 +170,7 @@ component:
         unsafe_new_component_state::<TContractState>()
     }
     
-    use data::InternalComponentMemberStateTrait as dataComponentMemberStateTrait;
+    impl data_ComponentMemberStateImpl = data::InternalComponentMemberStateImpl;
     mod data {
         use super::ContractAddress;
         use super::MyTrait;
@@ -179,13 +179,8 @@ component:
         use super::MyInnerImpl;
         #[derive(Copy, Drop)]
         struct ComponentMemberState {}
-        trait InternalComponentMemberStateTrait {
-            fn address(self: @ComponentMemberState) -> starknet::StorageBaseAddress;
-            fn read(self: @ComponentMemberState) -> u32;
-            fn write(ref self: ComponentMemberState, value: u32);
-        }
 
-        impl InternalComponentMemberStateImpl of InternalComponentMemberStateTrait {
+        impl InternalComponentMemberStateImpl of starknet::InternalComponentMemberStateTrait<ContractMemberState, u32> {
             fn address(self: @ComponentMemberState) -> starknet::StorageBaseAddress {
                 starknet::storage_base_address_const::<0x354f1c2d0eb5771cd5bf67a6689fcd6eed9444d91a39e5ef32a9b4ae5ca14ff>()
             }
@@ -255,7 +250,7 @@ component:
             }
         }
     }
-    use my_type_var::InternalComponentMemberStateTrait as my_type_varComponentMemberStateTrait;
+    impl my_type_var_ComponentMemberStateImpl = my_type_var::InternalComponentMemberStateImpl;
     mod my_type_var {
         use super::ContractAddress;
         use super::MyTrait;
@@ -264,13 +259,8 @@ component:
         use super::MyInnerImpl;
         #[derive(Copy, Drop)]
         struct ComponentMemberState {}
-        trait InternalComponentMemberStateTrait {
-            fn address(self: @ComponentMemberState) -> starknet::StorageBaseAddress;
-            fn read(self: @ComponentMemberState) -> super::super::MyType;
-            fn write(ref self: ComponentMemberState, value: super::super::MyType);
-        }
 
-        impl InternalComponentMemberStateImpl of InternalComponentMemberStateTrait {
+        impl InternalComponentMemberStateImpl of starknet::InternalComponentMemberStateTrait<ContractMemberState, super::super::MyType> {
             fn address(self: @ComponentMemberState) -> starknet::StorageBaseAddress {
                 starknet::storage_base_address_const::<0x1d7ac842e8e2a1c4fd94662d0a812cd378294e5156fee62dafbd49a010246c7>()
             }
@@ -457,3 +447,64 @@ mod __constructor_MyImpl {
 }
 
 //! > expected_diagnostics
+error: Trait has no implementation in context: core::traits::Into::<S, test::component::Event>
+ --> component:4:45
+           let event: Event = traits::Into::into(event);
+                                            ^**^
+
+error: Invalid drop trait implementation, Trait has no implementation in context: core::traits::Drop::<test::component::data::ComponentMemberState>.
+ --> component:22:5
+    impl ComponentStateDrop<TContractState> of Drop<ComponentState<TContractState>> {}
+    ^********************************************************************************^
+
+error: Invalid drop trait implementation, Trait has no implementation in context: core::traits::Drop::<test::component::Log>.
+ --> impls:1:1
+impl EventDrop of Drop::<Event>;
+^******************************^
+
+error: Trait has no implementation in context: core::array::ArrayTrait::<core::felt252>
+ --> event_impl:7:36
+                array::ArrayTrait::append(ref keys, selector!("Log"));
+                                   ^****^
+
+error: Trait has no implementation in context: core::array::SpanTrait::<core::felt252>
+ --> event_impl:17:43
+        let selector = *array::SpanTrait::pop_front(ref keys)?;
+                                          ^*******^
+
+error: Mismatched types. The type core::felt252 cannot be created from a numeric literal.
+ --> embeddable:9:58
+    option::OptionTraitImpl::expect(gas::withdraw_gas(), 'Out of gas');
+                                                         ^**********^
+
+error: Mismatched types. The type core::felt252 cannot be created from a numeric literal.
+ --> embeddable:31:58
+    option::OptionTraitImpl::expect(gas::withdraw_gas(), 'Out of gas');
+                                                         ^**********^
+
+error: Variable not dropped.
+ --> event_impl:3:9
+        self: @Log, ref keys: Array<felt252>, ref data: Array<felt252>
+        ^**^
+note: Trait has no implementation in context: core::traits::Drop::<@test::component::Log>
+note: Trait has no implementation in context: core::traits::Destruct::<@test::component::Log>
+
+error: Trait not found.
+ --> component:47:60
+        impl InternalComponentMemberStateImpl of starknet::InternalComponentMemberStateTrait<ContractMemberState, u32> {
+                                                           ^*******************************^
+
+error: Not a trait.
+ --> component:47:50
+        impl InternalComponentMemberStateImpl of starknet::InternalComponentMemberStateTrait<ContractMemberState, u32> {
+                                                 ^*******************************************************************^
+
+error: Trait not found.
+ --> component:127:60
+        impl InternalComponentMemberStateImpl of starknet::InternalComponentMemberStateTrait<ContractMemberState, super::super::MyType> {
+                                                           ^*******************************^
+
+error: Not a trait.
+ --> component:127:50
+        impl InternalComponentMemberStateImpl of starknet::InternalComponentMemberStateTrait<ContractMemberState, super::super::MyType> {
+                                                 ^************************************************************************************^

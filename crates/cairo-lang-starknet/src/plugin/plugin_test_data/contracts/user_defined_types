@@ -131,7 +131,7 @@ contract:
     fn contract_state_for_testing() -> ContractState {
         unsafe_new_contract_state()
     }
-    
+
     use var::InternalContractMemberStateTrait as varContractMemberStateTrait;
     mod var {
         use super::HashStateExTrait;
@@ -381,17 +381,17 @@ impl ZeroSizeHash<
 > of hash::Hash<ZeroSize, __State, __SHashState> {
     #[inline(always)]
     fn update_state(state: __State, value: ZeroSize) -> __State {
-        
+
         state
     }
 }
 impl ZeroSizeSerde of Serde::<ZeroSize> {
     fn serialize(self: @ZeroSize, ref output: array::Array<felt252>) {
-        
+
     }
     fn deserialize(ref serialized: array::Span<felt252>) -> Option<ZeroSize> {
         Option::Some(ZeroSize {
-            
+
         })
     }
 }
@@ -401,28 +401,28 @@ starknet_store_impl:
 
 impl StoreZeroSize of starknet::Store::<ZeroSize> {
     fn read(address_domain: u32, base: starknet::StorageBaseAddress) -> starknet::SyscallResult<ZeroSize> {
-        
+
         starknet::SyscallResult::Ok(
             ZeroSize {
-                
+
             }
         )
     }
     fn write(address_domain: u32, base: starknet::StorageBaseAddress, value: ZeroSize) -> starknet::SyscallResult<()> {
-        
+
         starknet::SyscallResult::Ok(())
     }
     fn read_at_offset(address_domain: u32, base: starknet::StorageBaseAddress, offset: u8) -> starknet::SyscallResult<ZeroSize> {
-        
+
         starknet::SyscallResult::Ok(
             ZeroSize {
-                
+
             }
         )
     }
     #[inline(always)]
     fn write_at_offset(address_domain: u32, base: starknet::StorageBaseAddress, offset: u8, value: ZeroSize) -> starknet::SyscallResult<()> {
-        
+
         starknet::SyscallResult::Ok(())
     }
     #[inline(always)]
@@ -690,7 +690,7 @@ impl EventIsEvent of starknet::Event<Event> {
         ref keys: Span<felt252>, ref data: Span<felt252>,
     ) -> Option<Event> {
         let selector = *array::SpanTrait::pop_front(ref keys)?;
-        
+
         Option::None
     }
 }
@@ -700,3 +700,13 @@ error: Plugin diagnostic: Multiple variants annotated with `#[default]`
  --> lib.cairo:38:9
         #[default]
         ^********^
+
+error: Method `address` not found on type "@test::test_contract::var::ContractMemberState". Did you import the correct trait and impl?
+ --> contract:61:30
+                        self.address(),
+                             ^*****^
+
+error: Method `address` not found on type "test::test_contract::var::ContractMemberState". Did you import the correct trait and impl?
+ --> contract:71:30
+                        self.address(),
+                             ^*****^
