@@ -19,6 +19,16 @@ mod component {
     }
     #[derive(Drop, starknet::Event)]
     struct Log {}
+
+    #[expose_as(MyImpl)]
+    impl MyInnerImpl<TCS, impl X: HasComponent<TCS>> of MyTrait<ComponentState<TCS>> {
+        fn get_data(self: @ComponentState<TCS>, addr: ContractAddress) -> u32 {
+            self.data
+        }
+        fn set_data(ref self: ComponentState<TCS>, addr: ContractAddress, value: u32) {
+            self.data = value;
+        }
+    }
 }
 
 //! > generated_cairo_code
@@ -39,6 +49,16 @@ mod component {
     }
     #[derive(Drop, starknet::Event)]
     struct Log {}
+
+    #[expose_as(MyImpl)]
+    impl MyInnerImpl<TCS, impl X: HasComponent<TCS>> of MyTrait<ComponentState<TCS>> {
+        fn get_data(self: @ComponentState<TCS>, addr: ContractAddress) -> u32 {
+            self.data
+        }
+        fn set_data(ref self: ComponentState<TCS>, addr: ContractAddress, value: u32) {
+            self.data = value;
+        }
+    }
 }
 
 component:
@@ -84,6 +104,7 @@ use starknet::event::EventEmitter;
     mod data {
         use super::Event;
         use super::Log;
+        use super::MyInnerImpl;
         #[derive(Copy, Drop)]
         struct ComponentMemberState {}
         trait InternalComponentMemberStateTrait {
@@ -123,6 +144,7 @@ use starknet::event::EventEmitter;
     mod map {
         use super::Event;
         use super::Log;
+        use super::MyInnerImpl;
         #[derive(Copy, Drop)]
         struct ComponentMemberState {}
         trait InternalComponentMemberStateTrait {
@@ -159,7 +181,6 @@ use starknet::event::EventEmitter;
             }
         }
     }
-
 
 
 
@@ -226,3 +247,74 @@ impl LogIsEvent of starknet::Event<Log> {
 }
 
 //! > expected_diagnostics
+error: Trait not found.
+ --> lib.cairo:18:57
+    impl MyInnerImpl<TCS, impl X: HasComponent<TCS>> of MyTrait<ComponentState<TCS>> {
+                                                        ^*****^
+
+error: Not a trait.
+ --> lib.cairo:18:57
+    impl MyInnerImpl<TCS, impl X: HasComponent<TCS>> of MyTrait<ComponentState<TCS>> {
+                                                        ^**************************^
+
+error: Trait not found.
+ --> lib.cairo:18:35
+    impl MyInnerImpl<TCS, impl X: HasComponent<TCS>> of MyTrait<ComponentState<TCS>> {
+                                  ^**********^
+
+error: Invalid drop trait implementation, Trait has no implementation in context: core::traits::Drop::<test::component::data::ComponentMemberState>.
+ --> component:7:5
+    impl ComponentStateDrop<TCS> of Drop<ComponentState<TCS>> {}
+    ^**********************************************************^
+
+error: Trait has no implementation in context: core::traits::Into::<S, test::component::Event>
+ --> component:25:46
+            let event: Event = traits::Into::into(event);
+                                             ^**^
+
+error: Invalid drop trait implementation, Trait has no implementation in context: core::traits::Drop::<test::component::Log>.
+ --> impls:1:1
+impl EventDrop of Drop::<Event>;
+^******************************^
+
+error: Trait has no implementation in context: core::array::ArrayTrait::<core::felt252>
+ --> event_impl:7:36
+                array::ArrayTrait::append(ref keys, 0x100572688f36e5f96cee69badc6dcd8712fa19d323be018601b92e967c60678);
+                                   ^****^
+
+error: Trait has no implementation in context: core::array::SpanTrait::<core::felt252>
+ --> event_impl:17:43
+        let selector = *array::SpanTrait::pop_front(ref keys)?;
+                                          ^*******^
+
+error: Mismatched types. The type core::integer::u32 cannot be created from a numeric literal.
+ --> component:57:38
+                let address_domain = 0_u32;
+                                     ^***^
+
+error: Mismatched types. The type core::integer::u32 cannot be created from a numeric literal.
+ --> component:67:38
+                let address_domain = 0_u32;
+                                     ^***^
+
+error: Variable not dropped.
+ --> component:52:24
+            fn address(self: @ComponentMemberState) -> starknet::StorageBaseAddress {
+                       ^**^
+note: Trait has no implementation in context: core::traits::Drop::<@test::component::data::ComponentMemberState>
+note: Trait has no implementation in context: core::traits::Destruct::<@test::component::data::ComponentMemberState>
+
+error: Trait has no implementation in context: core::hash::LegacyHash::<core::integer::u32>
+ --> component:94:46
+                    hash::LegacyHash::<u32>::hash(0x1af9e30ee4fed507d9432e0f1308eb5bd12221bef97071a48d86951102231be, key))
+                                             ^**^
+
+error: Mismatched types. The type core::integer::u32 cannot be created from a numeric literal.
+ --> component:98:38
+                let address_domain = 0_u32;
+                                     ^***^
+
+error: Mismatched types. The type core::integer::u32 cannot be created from a numeric literal.
+ --> component:108:38
+                let address_domain = 0_u32;
+                                     ^***^
