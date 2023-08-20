@@ -127,12 +127,7 @@ impl NoGenericArgsGenericLibfunc for Uint256InvModNLibfunc {
     ) -> Result<LibfuncSignature, SpecializationError> {
         let nz_ty = nonzero_ty(context, &get_u256_type(context)?)?;
         let range_check_type = context.get_concrete_type(RangeCheckType::id(), &[])?;
-        let rc_output = OutputVarInfo {
-            ty: range_check_type.clone(),
-            ref_info: OutputVarReferenceInfo::Deferred(DeferredOutputKind::AddConst {
-                param_idx: 0,
-            }),
-        };
+        let rc_output = OutputVarInfo::new_builtin(range_check_type.clone(), 0);
         let guarantee_output = OutputVarInfo {
             ty: context.get_concrete_type(U128MulGuaranteeType::id(), &[])?,
             ref_info: OutputVarReferenceInfo::SimpleDerefs,
@@ -141,13 +136,14 @@ impl NoGenericArgsGenericLibfunc for Uint256InvModNLibfunc {
             param_signatures: vec![
                 // Range check.
                 ParamSignature::new(range_check_type).with_allow_add_const(),
-                // b.
+                // b (divisor).
+                // TODO(oriz): Why is this non-zero?
                 ParamSignature::new(nz_ty.clone()),
-                // N for modulos.
+                // n (modulus).
                 ParamSignature::new(nz_ty.clone()),
             ],
             branch_signatures: vec![
-                // If the divisor has an inverse modulo N.
+                // If the divisor has an inverse modulo n.
                 BranchSignature {
                     vars: vec![
                         rc_output.clone(),
@@ -163,7 +159,7 @@ impl NoGenericArgsGenericLibfunc for Uint256InvModNLibfunc {
                     ],
                     ap_change: SierraApChange::Known { new_vars_only: false },
                 },
-                // The divisor does not have an inverse modulo N.
+                // The divisor does not have an inverse modulo n.
                 BranchSignature {
                     vars: vec![rc_output, guarantee_output.clone(), guarantee_output],
                     ap_change: SierraApChange::Known { new_vars_only: false },

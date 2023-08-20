@@ -430,6 +430,7 @@ fn build_u256_inv_mod_n(
         hint WideMul128 { lhs: n1, rhs: k1 } into { low: n1k1_low, high: n1k1_high };
     }
     casm_build_extend! {casm_builder,
+        // TODO: replace with `k * n + 1 - r * b = 0`.
         // Validating `r * b - 1 = k * n`.
         // Validate limb0.
         tempvar part0 = r0b0_low - one;
@@ -437,7 +438,7 @@ fn build_u256_inv_mod_n(
         tempvar leftover = part1 / u128_limit;
         // leftover is an integer in range:
         // [(0 - 1 - u128::MAX) / u128_limit, (u128::MAX - 1 - 0) / u128_limit] ==> [-1, 0].
-        tempvar leftover_sqr = leftover * leftover;
+        tempvar leftover_sqr = leftover * leftover; // TODO: remove
         assert leftover_sqr = leftover_sqr * leftover_sqr;
 
         // Validate limb1.
@@ -451,9 +452,6 @@ fn build_u256_inv_mod_n(
         // leftover is an integer in range:
         // [(-1 + 3 * 0 - 3 * u128::MAX) / u128_limit, (0 + 3 * u128::MAX - 3 * 0) / u128_limit]
         //   ==> [-2, 2].
-        // TODO: Will this work?
-        // tempvar leftover_sqr = leftover * leftover;
-        // assert leftover_sqr = *(range_check++);
         tempvar a = leftover - i16_lower_bound;
         assert a = *(range_check++);
         tempvar a = leftover + u128_bound_minus_i16_upper_bound;
@@ -470,9 +468,6 @@ fn build_u256_inv_mod_n(
         // leftover is an integer in range:
         // [(-2 + 3 * 0 - 3 * u128::MAX) / u128_limit, (2 + 3 * u128::MAX - 3 * 0) / u128_limit]
         //   ==> [-2, 2].
-        // TODO: Will this work?
-        // tempvar leftover_sqr = leftover * leftover;
-        // assert leftover_sqr = *(range_check++);
         tempvar a = leftover - i16_lower_bound;
         assert a = *(range_check++);
         tempvar a = leftover + u128_bound_minus_i16_upper_bound;
