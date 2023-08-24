@@ -72,6 +72,7 @@ cairo_lang_test_utils::test_file_test_with_runner!(
         l1_handler: "l1_handler",
         no_body: "no_body",
         external_event: "external_event",
+        with_component: "with_component"
     },
     ExpandContractTestRunner
 );

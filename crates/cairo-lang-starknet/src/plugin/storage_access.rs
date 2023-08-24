@@ -1,10 +1,12 @@
 use cairo_lang_defs::plugin::{PluginDiagnostic, PluginGeneratedFile, PluginResult};
+use cairo_lang_lowering::diagnostic;
 use cairo_lang_syntax::attribute::structured::{
     AttributeArg, AttributeArgVariant, AttributeStructurize,
 };
+use cairo_lang_syntax::node::ast::Expr;
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::helpers::QueryAttrs;
-use cairo_lang_syntax::node::{ast, Terminal, TypedSyntaxNode};
+use cairo_lang_syntax::node::{ast, SyntaxNode, Terminal, TypedSyntaxNode};
 use indent::indent_by;
 use indoc::formatdoc;
 
@@ -288,6 +290,99 @@ pub fn handle_enum(db: &dyn SyntaxGroup, enum_ast: ast::ItemEnum) -> PluginResul
     }
 }
 
+/// Handles a component macro. Assumes that the macro name is `component`. Verifies that the macro
+/// pattern is:
+/// component!(name = "<component_name>", storage = "<storage_name>", event = "<event_name>");
+/// If the macro pattern is as expected, generates the contract component code.
+pub fn handle_component(
+    db: &dyn SyntaxGroup,
+    component_macro_ast: ast::ItemInlineMacro,
+) -> PluginResult {
+    let macro_args = match component_macro_ast.arguments(db) {
+        ast::WrappedExprList::ParenthesizedExprList(args) => args.expressions(db),
+        _ => {
+            return PluginResult {
+                code: None,
+                diagnostics: vec![PluginDiagnostic {
+                    message: "Invalid1 component macro pattern, expected `component!(name = \
+                              \"<component_name>\", storage = \"<storage_name>\", event = \
+                              \"<event_name>\");`"
+                        .to_string(),
+                    stable_ptr: component_macro_ast.stable_ptr().untyped(),
+                }],
+                remove_original_item: true,
+            };
+        }
+    };
+    let arguments = macro_args.elements(db);
+    println!(
+        "arguments: {:?}",
+        arguments.iter().map(|x| x.as_syntax_node().get_text(db)).collect::<Vec<_>>()
+    );
+    let  arguments = macro_args.elements(db);
+    let (name_arg, storage_arg, event_arg) = match arguments.as_slice() {
+        [name_arg, storage_arg, event_arg] => (name_arg, storage_arg, event_arg),
+        _ => {
+            return PluginResult {
+                code: None,
+                diagnostics: vec![PluginDiagnostic {
+                    message: "Invalid2 component macro pattern, expected `component!(name = \
+                              \"<component_name>\", storage = \"<storage_name>\", event = \
+                              \"<event_name>\");`"
+                        .to_string(),
+                    stable_ptr: component_macro_ast.stable_ptr().untyped(),
+                }],
+                remove_original_item: true,
+            };
+        }
+    };
+    let mut diagnostics = vec![];
+    // TODO: allow long path
+    let component_name = try_extract_macro_param(db, name_arg, "name", &mut diagnostics);
+    let storage_name = try_extract_macro_param(db, storage_arg, "storage", &mut diagnostics);
+    let event_name = try_extract_macro_param(db, event_arg, "event", &mut diagnostics);
+
+    let generated_file = if let (Some(component_name), Some(storage_name), Some(event_name)) =
+        (component_name, storage_name, event_name)
+    {
+        let has_component_impl = 
+        format!(
+            "impl HasComponentaImpl of {component_name}::HasComponent<ContractState> {{
+                fn get_component(self: @ContractState) -> @{component_name}::ComponentState<ContractState> {{
+                    @{component_name}::unsafe_new_component_state()
+                }}
+                fn get_component_mut(ref self: ContractState) -> {component_name}::ComponentState<ContractState> \
+             {{
+                    {component_name}::unsafe_new_component_state()
+                }}
+                fn get_contract(self: @{component_name}::ComponentState<ContractState>) -> @ContractState {{
+                    @unsafe_new_contract_state()
+                }}
+                fn get_contract_mut(ref self: {component_name}::ComponentState<ContractState>) -> ContractState \
+             {{
+                    unsafe_new_contract_state()
+                }}
+                fn emit(ref self: {component_name}::ComponentState<ContractState>, event: {component_name}::Event) {{
+                    let mut contract = {component_name}::HasComponent::get_contract_mut(ref self);
+                    contract.emit(Event::{event_name}(event));
+                }}
+            }}",
+        );
+        Some(PluginGeneratedFile {
+                name: "has_component_impl".into(),
+                content: has_component_impl,
+                aux_data: DynGeneratedFileAuxData(Arc::new(TrivialPluginAuxData {})),
+            })
+    } else {
+        None
+    };
+    PluginResult {
+        code: generated_file,
+        diagnostics,
+        remove_original_item: true,
+    }
+}
+
 /// Returns true if the type should be derived as a storage_access.
 pub fn derive_storage_access_needed<T: QueryAttrs>(with_attrs: &T, db: &dyn SyntaxGroup) -> bool {
     with_attrs.query_attr(db, "derive").into_iter().any(|attr| {
@@ -306,4 +401,32 @@ pub fn derive_storage_access_needed<T: QueryAttrs>(with_attrs: &T, db: &dyn Synt
         }
         false
     })
+}
+ /// Verifies that a given Expr is a BinaryExpr with the lhs equals to the parameter name string and the rhs is a simple identidier (i.e. a PathExpr with a single element).
+ /// Returns the rhs identifier if the verification succeeds, otherwise returns None.
+ fn try_extract_macro_param(db: &dyn SyntaxGroup, expr: &Expr, param_name: &str, diagnostics: &mut Vec<PluginDiagnostic>) -> Option<String> {
+    match expr {
+        // Change to named arg.
+        Expr::Binary(binary_expr)
+            if binary_expr.lhs(db).as_syntax_node().get_text(db) == param_name =>
+        {
+            match binary_expr.rhs(db) {
+                Expr::Path(path) if path.elements(db).len() == 1 => Some(path.as_syntax_node().get_text(db)),
+                _ => {
+                    diagnostics.push(PluginDiagnostic {
+                        message: format!("Component macro parameter `{}` must be a simple identifier.", param_name),
+                        stable_ptr: binary_expr.rhs(db).stable_ptr().untyped(),
+                    });
+                    None
+                }
+            }
+        }
+        _ => {
+            diagnostics.push(PluginDiagnostic {
+                message: format!("Invalid component macro argument. Expected `{0} = [{0}_name]`", param_name),
+                stable_ptr: expr.stable_ptr().untyped(),
+            });
+            None
+        }
+    }
 }

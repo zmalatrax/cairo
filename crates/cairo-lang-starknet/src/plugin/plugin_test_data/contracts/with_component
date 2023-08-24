@@ -1,0 +1,327 @@
+//! > Test expansion of a simple starknet contract.
+
+//! > test_runner_name
+ExpandContractTestRunner
+
+//! > cairo_code
+mod a {
+    use starknet::ContractAddress;
+
+    // autogen.
+    trait HasComponent<TCS> {
+        fn get_component(self: @TCS) -> @ComponentState<TCS>;
+        fn get_component_mut(ref self: TCS) -> ComponentState<TCS>;
+        fn get_contract(self: @ComponentState<TCS>) -> @TCS;
+        fn get_contract_mut(ref self: ComponentState<TCS>) -> TCS;
+        // TODO: Make this an associated impl of EventEmitter.
+        fn emit(ref self: ComponentState<TCS>, event: Event);
+    }
+
+    // #[storage]
+    struct Storage {
+        data: u32
+    }
+    #[derive(Drop)]
+    struct ComponentState<TCS> {
+    }
+    fn unsafe_new_component_state<TCS>() -> ComponentState<TCS> {
+        ComponentState::<TCS> {
+        }
+    }
+    #[event]
+    #[derive(Drop, starknet::Event)]
+    enum Event {
+    }
+}
+
+#[starknet::contract]
+mod test_contract {
+    use starknet::class_hash::ClassHash;
+    use starknet::contract_address::ContractAddress;
+    use starknet::storage_access::StorageAddress;
+    use super::a;
+    #[storage]
+    struct Storage {
+        a_storage: a::Storage,
+    }
+
+    #[event]
+    #[derive(Drop, starknet::Event)]
+    enum Event {
+        A: a::Event,
+    }
+    component!(name=a, storage=a_storage, event=A);
+    
+
+}
+
+//! > generated_cairo_code
+lib.cairo:
+
+mod a {
+    use starknet::ContractAddress;
+
+    // autogen.
+    trait HasComponent<TCS> {
+        fn get_component(self: @TCS) -> @ComponentState<TCS>;
+        fn get_component_mut(ref self: TCS) -> ComponentState<TCS>;
+        fn get_contract(self: @ComponentState<TCS>) -> @TCS;
+        fn get_contract_mut(ref self: ComponentState<TCS>) -> TCS;
+        // TODO: Make this an associated impl of EventEmitter.
+        fn emit(ref self: ComponentState<TCS>, event: Event);
+    }
+
+    // #[storage]
+    struct Storage {
+        data: u32
+    }
+    #[derive(Drop)]
+    struct ComponentState<TCS> {
+    }
+    fn unsafe_new_component_state<TCS>() -> ComponentState<TCS> {
+        ComponentState::<TCS> {
+        }
+    }
+    #[event]
+    #[derive(Drop, starknet::Event)]
+    enum Event {
+    }
+}
+
+#[starknet::contract]
+mod test_contract {
+    use starknet::class_hash::ClassHash;
+    use starknet::contract_address::ContractAddress;
+    use starknet::storage_access::StorageAddress;
+    use super::a;
+    #[storage]
+    struct Storage {
+        a_storage: a::Storage,
+    }
+
+    #[event]
+    #[derive(Drop, starknet::Event)]
+    enum Event {
+        A: a::Event,
+    }
+    component!(name=a, storage=a_storage, event=A);
+    
+
+}
+
+impls:
+
+impl ComponentStateDrop<TCS, impl TCSDrop: Drop<TCS>> of Drop::<ComponentState<TCS>>;
+
+
+impls:
+
+impl EventDrop of Drop::<Event>;
+
+
+event_impl:
+
+impl EventIsEvent of starknet::Event<Event> {
+    fn append_keys_and_data(
+        self: @Event, ref keys: Array<felt252>, ref data: Array<felt252>
+    ) {
+        match self {
+        }
+    }
+    fn deserialize(
+        ref keys: Span<felt252>, ref data: Span<felt252>,
+    ) -> Option<Event> {
+        let selector = *array::SpanTrait::pop_front(ref keys)?;
+        
+        Option::None
+    }
+}
+
+
+
+contract:
+
+use starknet::SyscallResultTrait;
+use starknet::SyscallResultTraitImpl;
+
+#[cfg(test)]
+const TEST_CLASS_HASH: felt252 = 70129675780899221302108720088749934987153205670392978391195128259502237592;
+use starknet::event::EventEmitter;
+#[derive(Drop)]
+    struct ContractState {
+        a_storage: a_storage::ContractState,
+    }
+    #[inline(always)]
+    fn unsafe_new_contract_state() -> ContractState {
+        ContractState {
+            a_storage: a_storage::ContractState{},
+        }
+    }
+    #[cfg(test)]
+    #[inline(always)]
+    fn contract_state_for_testing() -> ContractState {
+        unsafe_new_contract_state()
+    }
+
+
+    
+    impl ContractStateEventEmitter of EventEmitter<ContractState, Event> {
+        fn emit<S, impl IntoImp: traits::Into<S, Event>>(ref self: ContractState, event: S) {
+            let event: Event = traits::Into::into(event);
+            let mut keys = Default::<array::Array>::default();
+            let mut data = Default::<array::Array>::default();
+            starknet::Event::append_keys_and_data(@event, ref keys, ref data);
+            starknet::syscalls::emit_event_syscall(
+                array::ArrayTrait::span(@keys),
+                array::ArrayTrait::span(@data),
+            ).unwrap_syscall()
+        }
+    }
+
+    use a_storage::InternalContractStateTrait as a_storageContractStateTrait;
+    mod a_storage {
+        use super::ClassHash;
+        use super::ContractAddress;
+        use super::StorageAddress;
+        use super::a;
+        use super::Event;
+        use starknet::SyscallResultTrait;
+        use starknet::SyscallResultTraitImpl;
+        use super;
+
+        #[derive(Copy, Drop)]
+        struct ContractState {}
+        trait InternalContractStateTrait {
+            fn address(self: @ContractState) -> starknet::StorageBaseAddress;
+            fn read(self: @ContractState) -> a::Storage;
+            fn write(ref self: ContractState, value: a::Storage);
+        }
+
+        impl InternalContractStateImpl of InternalContractStateTrait {
+            fn address(self: @ContractState) -> starknet::StorageBaseAddress {
+                starknet::storage_base_address_const::<0x35db85d6bd8b280cce7e23e78cae8a0994736620a0999bc74164516f562c567>()
+            }
+            fn read(self: @ContractState) -> a::Storage {
+                // Only address_domain 0 is currently supported.
+                let address_domain = 0_u32;
+                starknet::Store::<a::Storage>::read(
+                    address_domain,
+                    self.address(),
+                ).unwrap_syscall()
+            }
+            fn write(ref self: ContractState, value: a::Storage) {
+                // Only address_domain 0 is currently supported.
+                let address_domain = 0_u32;
+                starknet::Store::<a::Storage>::write(
+                    address_domain,
+                    self.address(),
+                    value,
+                ).unwrap_syscall()
+            }
+        }
+    }
+
+
+mod __external {
+        use super::ClassHash;
+        use super::ContractAddress;
+        use super::StorageAddress;
+        use super::a;
+        use super::Event;
+
+    
+}
+
+mod __l1_handler {
+        use super::ClassHash;
+        use super::ContractAddress;
+        use super::StorageAddress;
+        use super::a;
+        use super::Event;
+
+    
+}
+
+mod __constructor {
+        use super::ClassHash;
+        use super::ContractAddress;
+        use super::StorageAddress;
+        use super::a;
+        use super::Event;
+
+    
+}
+
+
+event_impl:
+
+impl EventIsEvent of starknet::Event<Event> {
+    fn append_keys_and_data(
+        self: @Event, ref keys: Array<felt252>, ref data: Array<felt252>
+    ) {
+        match self {
+            Event::A(val) => {
+                array::ArrayTrait::append(ref keys, 0x3783fac2efed8fbc9ad443e592ee30e61d65f471140c10ca155e937b435b760);
+                starknet::Event::append_keys_and_data(
+                    val, ref keys, ref data
+                );
+            },
+        }
+    }
+    fn deserialize(
+        ref keys: Span<felt252>, ref data: Span<felt252>,
+    ) -> Option<Event> {
+        let selector = *array::SpanTrait::pop_front(ref keys)?;
+        
+            if selector == 0x3783fac2efed8fbc9ad443e592ee30e61d65f471140c10ca155e937b435b760 {
+                let val = starknet::Event::deserialize(
+                    ref keys, ref data
+                )?;
+                return Option::Some(Event::A(val));
+            }
+        Option::None
+    }
+}
+impl EventAIntoEvent of Into<a::Event, Event> {
+    fn into(self: a::Event) -> Event {
+        Event::A(self)
+    }
+}
+
+
+
+has_component_impl:
+
+impl HasComponentaImpl of a::HasComponent<ContractState> {
+                fn get_component(self: @ContractState) -> @a::ComponentState<ContractState> {
+                    @a::unsafe_new_component_state()
+                }
+                fn get_component_mut(ref self: ContractState) -> a::ComponentState<ContractState> {
+                    a::unsafe_new_component_state()
+                }
+                fn get_contract(self: @a::ComponentState<ContractState>) -> @ContractState {
+                    @unsafe_new_contract_state()
+                }
+                fn get_contract_mut(ref self: a::ComponentState<ContractState>) -> ContractState {
+                    unsafe_new_contract_state()
+                }
+                fn emit(ref self: a::ComponentState<ContractState>, event: a::Event) {
+                    let mut contract = a::HasComponent::get_contract_mut(ref self);
+                    contract.emit(Event::A(event));
+                }
+            }
+
+impls:
+
+impl ContractStateDrop of Drop::<ContractState>;
+
+//! > expected_diagnostics
+error: Trait has no implementation in context: core::starknet::storage_access::Store::<test::a::Storage>
+ --> contract:64:48
+                starknet::Store::<a::Storage>::read(
+                                               ^**^
+
+error: Trait has no implementation in context: core::starknet::storage_access::Store::<test::a::Storage>
+ --> contract:72:48
+                starknet::Store::<a::Storage>::write(
+                                               ^***^
