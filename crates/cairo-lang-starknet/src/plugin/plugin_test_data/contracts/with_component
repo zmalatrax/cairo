@@ -141,20 +141,31 @@ impl EventIsEvent of starknet::Event<Event> {
 
 contract:
 
-use starknet::SyscallResultTrait;
-use starknet::SyscallResultTraitImpl;
-
-#[cfg(test)]
-const TEST_CLASS_HASH: felt252 = 70129675780899221302108720088749934987153205670392978391195128259502237592;
 use starknet::event::EventEmitter;
-#[derive(Drop)]
-    struct ContractState {
-        a_storage: a_storage::ContractState,
+
+    impl ContractStateEventEmitter of EventEmitter<ContractState, Event> {
+        fn emit<S, impl IntoImp: traits::Into<S, Event>>(ref self: ContractState, event: S) {
+            let event: Event = traits::Into::into(event);
+            let mut keys = Default::<array::Array>::default();
+            let mut data = Default::<array::Array>::default();
+            starknet::Event::append_keys_and_data(@event, ref keys, ref data);
+            starknet::SyscallResultTraitImpl::unwrap_syscall(
+                starknet::syscalls::emit_event_syscall(
+                    array::ArrayTrait::span(@keys),
+                    array::ArrayTrait::span(@data),
+                )
+            )
+        }
     }
+
+    struct ContractState {
+        a_storage: a_storage::ContractMemberState,
+    }
+    impl ContractStateDrop of Drop<ContractState> {}
     #[inline(always)]
     fn unsafe_new_contract_state() -> ContractState {
         ContractState {
-            a_storage: a_storage::ContractState{},
+            a_storage: a_storage::ContractMemberState{},
         }
     }
     #[cfg(test)]
@@ -162,95 +173,61 @@ use starknet::event::EventEmitter;
     fn contract_state_for_testing() -> ContractState {
         unsafe_new_contract_state()
     }
-
-
     
-    impl ContractStateEventEmitter of EventEmitter<ContractState, Event> {
-        fn emit<S, impl IntoImp: traits::Into<S, Event>>(ref self: ContractState, event: S) {
-            let event: Event = traits::Into::into(event);
-            let mut keys = Default::<array::Array>::default();
-            let mut data = Default::<array::Array>::default();
-            starknet::Event::append_keys_and_data(@event, ref keys, ref data);
-            starknet::syscalls::emit_event_syscall(
-                array::ArrayTrait::span(@keys),
-                array::ArrayTrait::span(@data),
-            ).unwrap_syscall()
-        }
-    }
-
-    use a_storage::InternalContractStateTrait as a_storageContractStateTrait;
+    use a_storage::InternalContractMemberStateTrait as a_storageContractMemberStateTrait;
     mod a_storage {
         use super::ClassHash;
         use super::ContractAddress;
         use super::StorageAddress;
         use super::a;
         use super::Event;
-        use starknet::SyscallResultTrait;
-        use starknet::SyscallResultTraitImpl;
-        use super;
-
         #[derive(Copy, Drop)]
-        struct ContractState {}
-        trait InternalContractStateTrait {
-            fn address(self: @ContractState) -> starknet::StorageBaseAddress;
-            fn read(self: @ContractState) -> a::Storage;
-            fn write(ref self: ContractState, value: a::Storage);
+        struct ContractMemberState {}
+        trait InternalContractMemberStateTrait {
+            fn address(self: @ContractMemberState) -> starknet::StorageBaseAddress;
+            fn read(self: @ContractMemberState) -> a::Storage;
+            fn write(ref self: ContractMemberState, value: a::Storage);
         }
 
-        impl InternalContractStateImpl of InternalContractStateTrait {
-            fn address(self: @ContractState) -> starknet::StorageBaseAddress {
+        impl InternalContractMemberStateImpl of InternalContractMemberStateTrait {
+            fn address(self: @ContractMemberState) -> starknet::StorageBaseAddress {
                 starknet::storage_base_address_const::<0x35db85d6bd8b280cce7e23e78cae8a0994736620a0999bc74164516f562c567>()
             }
-            fn read(self: @ContractState) -> a::Storage {
+            fn read(self: @ContractMemberState) -> a::Storage {
                 // Only address_domain 0 is currently supported.
                 let address_domain = 0_u32;
-                starknet::Store::<a::Storage>::read(
-                    address_domain,
-                    self.address(),
-                ).unwrap_syscall()
+                starknet::SyscallResultTraitImpl::unwrap_syscall(
+                    starknet::Store::<a::Storage>::read(
+                        address_domain,
+                        self.address(),
+                    )
+                )
             }
-            fn write(ref self: ContractState, value: a::Storage) {
+            fn write(ref self: ContractMemberState, value: a::Storage) {
                 // Only address_domain 0 is currently supported.
                 let address_domain = 0_u32;
-                starknet::Store::<a::Storage>::write(
-                    address_domain,
-                    self.address(),
-                    value,
-                ).unwrap_syscall()
+                starknet::SyscallResultTraitImpl::unwrap_syscall(
+                    starknet::Store::<a::Storage>::write(
+                        address_domain,
+                        self.address(),
+                        value,
+                    )
+                )
             }
         }
     }
+#[cfg(test)]
+const TEST_CLASS_HASH: felt252 = 0x27b1263f5d9e6f4cfb1ac54b6b392a5c5fefd5e72c876027d06cf462416798;
 
 
-mod __external {
-        use super::ClassHash;
-        use super::ContractAddress;
-        use super::StorageAddress;
-        use super::a;
-        use super::Event;
+    mod __external {
+    }
 
-    
-}
+    mod __l1_handler {
+    }
 
-mod __l1_handler {
-        use super::ClassHash;
-        use super::ContractAddress;
-        use super::StorageAddress;
-        use super::a;
-        use super::Event;
-
-    
-}
-
-mod __constructor {
-        use super::ClassHash;
-        use super::ContractAddress;
-        use super::StorageAddress;
-        use super::a;
-        use super::Event;
-
-    
-}
+    mod __constructor {
+    }
 
 
 event_impl:
@@ -261,7 +238,7 @@ impl EventIsEvent of starknet::Event<Event> {
     ) {
         match self {
             Event::A(val) => {
-                array::ArrayTrait::append(ref keys, 0x3783fac2efed8fbc9ad443e592ee30e61d65f471140c10ca155e937b435b760);
+                array::ArrayTrait::append(ref keys, selector!("A"));
                 starknet::Event::append_keys_and_data(
                     val, ref keys, ref data
                 );
@@ -273,7 +250,7 @@ impl EventIsEvent of starknet::Event<Event> {
     ) -> Option<Event> {
         let selector = *array::SpanTrait::pop_front(ref keys)?;
         
-            if selector == 0x3783fac2efed8fbc9ad443e592ee30e61d65f471140c10ca155e937b435b760 {
+            if selector == selector!("A") {
                 let val = starknet::Event::deserialize(
                     ref keys, ref data
                 )?;
@@ -311,17 +288,13 @@ impl HasComponentaImpl of a::HasComponent<ContractState> {
                 }
             }
 
-impls:
-
-impl ContractStateDrop of Drop::<ContractState>;
-
 //! > expected_diagnostics
 error: Trait has no implementation in context: core::starknet::storage_access::Store::<test::a::Storage>
- --> contract:64:48
-                starknet::Store::<a::Storage>::read(
-                                               ^**^
+ --> contract:57:52
+                    starknet::Store::<a::Storage>::read(
+                                                   ^**^
 
 error: Trait has no implementation in context: core::starknet::storage_access::Store::<test::a::Storage>
- --> contract:72:48
-                starknet::Store::<a::Storage>::write(
-                                               ^***^
+ --> contract:67:52
+                    starknet::Store::<a::Storage>::write(
+                                                   ^***^

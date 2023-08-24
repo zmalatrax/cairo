@@ -3,7 +3,7 @@ use cairo_lang_lowering::diagnostic;
 use cairo_lang_syntax::attribute::structured::{
     AttributeArg, AttributeArgVariant, AttributeStructurize,
 };
-use cairo_lang_syntax::node::ast::Expr;
+use cairo_lang_syntax::node::ast::{Expr, Arg};
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::helpers::QueryAttrs;
 use cairo_lang_syntax::node::{ast, SyntaxNode, Terminal, TypedSyntaxNode};
@@ -299,7 +299,7 @@ pub fn handle_component(
     component_macro_ast: ast::ItemInlineMacro,
 ) -> PluginResult {
     let macro_args = match component_macro_ast.arguments(db) {
-        ast::WrappedExprList::ParenthesizedExprList(args) => args.expressions(db),
+        ast::WrappedArgList::ParenthesizedArgList(args) => args.args(db),
         _ => {
             return PluginResult {
                 code: None,
@@ -371,7 +371,8 @@ pub fn handle_component(
         Some(PluginGeneratedFile {
                 name: "has_component_impl".into(),
                 content: has_component_impl,
-                aux_data: DynGeneratedFileAuxData(Arc::new(TrivialPluginAuxData {})),
+                aux_data: None,
+                diagnostics_mappings: Default::default(),
             })
     } else {
         None
@@ -404,8 +405,15 @@ pub fn derive_storage_access_needed<T: QueryAttrs>(with_attrs: &T, db: &dyn Synt
 }
  /// Verifies that a given Expr is a BinaryExpr with the lhs equals to the parameter name string and the rhs is a simple identidier (i.e. a PathExpr with a single element).
  /// Returns the rhs identifier if the verification succeeds, otherwise returns None.
- fn try_extract_macro_param(db: &dyn SyntaxGroup, expr: &Expr, param_name: &str, diagnostics: &mut Vec<PluginDiagnostic>) -> Option<String> {
-    match expr {
+ fn try_extract_macro_param(db: &dyn SyntaxGroup, arg: &Arg, param_name: &str, diagnostics: &mut Vec<PluginDiagnostic>) -> Option<String> {
+    // TODO(Gil): Change to named.
+    let expr = 
+    match arg.arg_clause(db) {
+        ast::ArgClause::Unnamed(unnamed_arg) => unnamed_arg.value(db),
+        ast::ArgClause::Named(_) => todo!(),
+        ast::ArgClause::FieldInitShorthand(_) => todo!(),
+    };
+        match expr {
         // Change to named arg.
         Expr::Binary(binary_expr)
             if binary_expr.lhs(db).as_syntax_node().get_text(db) == param_name =>
