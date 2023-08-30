@@ -515,10 +515,10 @@ fn build_u256_inv_mod_n(
 
         // Validate limb1 for `b` and `n`.
         // We know that limb2 and limb3 should be 0.
-        // Therfore `g1` is 0 or both `b1` and `n1` are 0.
-        // We also know that g0*b1, g1*b0, g0*n1 and g1*n0 should be smaller than 2**128.
-        // Therefore the smaller of each pair must be smaller than 2**64.
-        // So by checking this we can avoid wraparound on the prime.
+        // Therefore, `g1` is 0 or both `bdg1` and `ndg1` are 0.
+        // We also know that g0*bdg1, g1*bdg0, g0*ndg1 and g1*ndg0 should be smaller than 2**128.
+        // Therefore, the smaller of each pair must be smaller than 2**64.
+        // So by checking this we can avoid overflow in the field.
         // And we can instead check that the sum of small items of both is smaller than 2**65.
         tempvar gbdg1;
         tempvar gndg1;
