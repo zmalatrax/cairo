@@ -1508,6 +1508,7 @@ pub fn execute_core_hint(
     exec_scopes: &mut ExecutionScopes,
     core_hint: &cairo_lang_casm::hints::CoreHint,
 ) -> Result<(), HintError> {
+    println!("************** starting execute_core_hint ************");
     match core_hint {
         CoreHint::AllocSegment { dst } => {
             let segment = vm.add_memory_segment();
@@ -1523,8 +1524,14 @@ pub fn execute_core_hint(
             )?;
         }
         CoreHint::TestLessThanOrEqual { lhs, rhs, dst } => {
+            dbg!(lhs);
+            dbg!(rhs);
+            dbg!(dst);
+
             let lhs_val = get_val(vm, lhs)?;
+            println!("$$$$$ lhs_val: {}", lhs_val);
             let rhs_val = get_val(vm, rhs)?;
+            println!("$$$$$ rhs_val: {}", rhs_val);
             insert_value_to_cellref!(
                 vm,
                 dst,
