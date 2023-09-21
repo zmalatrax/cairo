@@ -79,11 +79,19 @@ pub fn calc_metadata(
         })?;
 
     if no_eq_solver {
+        let post_function_set_costs2: OrderedHashMap<FunctionId, i32> = config
+            .function_set_costs
+            .iter()
+            .map(|(func, costs)| (func.clone(), costs[CostTokenType::Const]))
+            .collect();
         let post_gas_info2 = compute_postcost_info(
             program,
             &|idx| ap_change_info.variable_values.get(idx).copied().unwrap_or_default(),
             &pre_gas_info2,
+            &post_function_set_costs2,
         )?;
+
+        post_gas_info.assert_eq(&post_gas_info2);
 
         // Replace post_gas_info with the result of the non-equation-based algorithm.
         post_gas_info = post_gas_info2;

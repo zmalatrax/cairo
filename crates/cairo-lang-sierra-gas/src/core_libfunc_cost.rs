@@ -15,8 +15,8 @@ pub use crate::starknet_libfunc_cost_base::SYSTEM_CALL_COST;
 
 /// Cost operations for getting `Option<i64>` costs values.
 struct Ops<'a> {
-    gas_info: &'a GasInfo,
-    idx: StatementIdx,
+    pub gas_info: &'a GasInfo,
+    pub idx: StatementIdx,
 }
 impl CostOperations for Ops<'_> {
     type CostType = Option<OrderedHashMap<CostTokenType, i64>>;

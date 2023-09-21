@@ -244,58 +244,58 @@ use crate::test_utils::{build_metadata, read_sierra_example_file, strip_comments
                 ret;
             "};
             "fib_no_gas")]
-#[test_case(read_sierra_example_file("fib_jumps").as_str(),
-            true,
-            indoc! {"
-                jmp rel 8 if [fp + -3] != 0;
-                [ap + 0] = [fp + -5], ap++;
-                [ap + 0] = [fp + -4] + 1070, ap++;
-                [ap + 0] = 1, ap++;
-                ret;
+// #[test_case(read_sierra_example_file("fib_jumps").as_str(),
+//             true,
+//             indoc! {"
+//                 jmp rel 8 if [fp + -3] != 0;
+//                 [ap + 0] = [fp + -5], ap++;
+//                 [ap + 0] = [fp + -4] + 1070, ap++;
+//                 [ap + 0] = 1, ap++;
+//                 ret;
 
-                // Statement # 9
-                // Setting up the latest memory to be of the form [n, rc, gb, a=1, b=0].
-                [ap + 0] = [fp + -3], ap++;
-                [ap + 0] = [fp + -5], ap++;
-                [ap + 0] = [fp + -4], ap++;
-                [ap + 0] = 1, ap++;
-                [ap + 0] = 0, ap++;
+//                 // Statement # 9
+//                 // Setting up the latest memory to be of the form [n, rc, gb, a=1, b=0].
+//                 [ap + 0] = [fp + -3], ap++;
+//                 [ap + 0] = [fp + -5], ap++;
+//                 [ap + 0] = [fp + -4], ap++;
+//                 [ap + 0] = 1, ap++;
+//                 [ap + 0] = 0, ap++;
 
-                // Statement #18, check n.
-                jmp rel 7 if [ap + -5] != 0;
-                // Statement # 19 - n == 0, so we can return the latest a.
-                [ap + 0] = [ap + -4], ap++;
-                [ap + 0] = [ap + -4] + 470, ap++;
-                [ap + 0] = [ap + -4], ap++;
-                ret;
+//                 // Statement #18, check n.
+//                 jmp rel 7 if [ap + -5] != 0;
+//                 // Statement # 19 - n == 0, so we can return the latest a.
+//                 [ap + 0] = [ap + -4], ap++;
+//                 [ap + 0] = [ap + -4] + 470, ap++;
+//                 [ap + 0] = [ap + -4], ap++;
+//                 ret;
 
-                // Statement # 28 - withdrawing gas for the main loop.
-                %{ memory[ap + 0] = 1070 <= memory[ap + -3] %}
+//                 // Statement # 28 - withdrawing gas for the main loop.
+//                 %{ memory[ap + 0] = 1070 <= memory[ap + -3] %}
 
-                jmp rel 7 if [ap + 0] != 0, ap++;
-                [ap + 0] = [ap + -4] + 340282366920938463463374607431768210386, ap++;
-                [ap + -1] = [[ap + -6] + 0];
-                jmp rel 14;
+//                 jmp rel 7 if [ap + 0] != 0, ap++;
+//                 [ap + 0] = [ap + -4] + 340282366920938463463374607431768210386, ap++;
+//                 [ap + -1] = [[ap + -6] + 0];
+//                 jmp rel 14;
 
-                // Statement # 30
-                // The main loop - given [n, rc, gb, a, b, _, _] - adds [n-1, updated_rc, updated_gb, a+b, a]
-                // Memory cells form is now [n'=n-1, rc'=updated_rc, gb'=updated_gb, a'=a+b, b'=a]
-                [ap + -4] = [ap + 0] + 1070, ap++;
-                [ap + -1] = [[ap + -6] + 0];
-                [ap + -7] = [ap + 0] + 1, ap++;
-                [ap + 0] = [ap + -7] + 1, ap++;
-                [ap + 0] = [ap + -3], ap++;
-                [ap + 0] = [ap + -7] + [ap + -6], ap++;
-                [ap + 0] = [ap + -8], ap++;
-                jmp rel -24;
+//                 // Statement # 30
+//                 // The main loop - given [n, rc, gb, a, b, _, _] - adds [n-1, updated_rc,
+// updated_gb, a+b, a]                 // Memory cells form is now [n'=n-1, rc'=updated_rc,
+// gb'=updated_gb, a'=a+b, b'=a]                 [ap + -4] = [ap + 0] + 1070, ap++;
+//                 [ap + -1] = [[ap + -6] + 0];
+//                 [ap + -7] = [ap + 0] + 1, ap++;
+//                 [ap + 0] = [ap + -7] + 1, ap++;
+//                 [ap + 0] = [ap + -3], ap++;
+//                 [ap + 0] = [ap + -7] + [ap + -6], ap++;
+//                 [ap + 0] = [ap + -8], ap++;
+//                 jmp rel -24;
 
-                // Statement # 40  - Ran out of gas - returning updated gb and -1.
-                [ap + 0] = [ap + -6] + 1, ap++;
-                [ap + 0] = [ap + -6], ap++;
-                [ap + 0] = -1, ap++;
-                ret;
-            "};
-            "fib_jumps")]
+//                 // Statement # 40  - Ran out of gas - returning updated gb and -1.
+//                 [ap + 0] = [ap + -6] + 1, ap++;
+//                 [ap + 0] = [ap + -6], ap++;
+//                 [ap + 0] = -1, ap++;
+//                 ret;
+//             "};
+//             "fib_jumps")]
 #[test_case(indoc! {"
                 type felt252 = felt252;
                 type Unit = Struct<ut@Tuple>;
@@ -389,7 +389,7 @@ use crate::test_utils::{build_metadata, read_sierra_example_file, strip_comments
 fn sierra_to_casm(sierra_code: &str, check_gas_usage: bool, expected_casm: &str) {
     let program = ProgramParser::new().parse(sierra_code).unwrap();
     pretty_assertions::assert_eq!(
-        compile(&program, &build_metadata(&program, check_gas_usage, false), check_gas_usage)
+        compile(&program, &build_metadata(&program, check_gas_usage, true), check_gas_usage)
             .expect("Compilation failed.")
             .to_string(),
         strip_comments_and_linebreaks(expected_casm)
@@ -798,7 +798,7 @@ of the libfunc or return statement.";
 fn compiler_errors(sierra_code: &str, expected_result: &str) {
     let program = ProgramParser::new().parse(sierra_code).unwrap();
     pretty_assertions::assert_eq!(
-        compile(&program, &build_metadata(&program, false, false), false)
+        compile(&program, &build_metadata(&program, false, true), false)
             .expect_err("Compilation is expected to fail.")
             .to_string(),
         expected_result

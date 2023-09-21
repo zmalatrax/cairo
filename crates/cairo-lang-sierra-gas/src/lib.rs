@@ -119,6 +119,7 @@ pub fn compute_precost_info(program: &Program) -> Result<GasInfo, CostError> {
             core_libfunc_cost_base::core_libfunc_cost(core_libfunc, &type_sizes)
         }),
         &compute_costs::PreCostContext {},
+        &Default::default(),
     )
 }
 
@@ -201,7 +202,7 @@ fn calc_gas_info_inner<
         //   should optimize over function costs before optimizing over withdraw variables.
         // * Generally we would of course prefer optimizing over withdraw variables before branch
         //   align variables, as they cost gas to the user.
-        let mut minimization_vars = vec![vec![], vec![], vec![]];
+        let mut minimization_vars = vec![vec![], vec![], vec![], vec![]];
         for v in token_equations.iter().flat_map(|eq| eq.var_to_coef.keys()).unique() {
             minimization_vars[match v {
                 Var::LibfuncImplicitGasVariable(idx, _) => {
@@ -212,7 +213,7 @@ fn calc_gas_info_inner<
                                 CoreConcreteLibfunc::Gas(GasConcreteLibfunc::WithdrawGas(_)) => 1,
                                 CoreConcreteLibfunc::Gas(
                                     GasConcreteLibfunc::BuiltinWithdrawGas(_),
-                                ) => 0,
+                                ) => 1,
                                 // TODO(orizi): Make this actually maximized.
                                 CoreConcreteLibfunc::Gas(GasConcreteLibfunc::RedepositGas(_)) => {
                                     continue;
@@ -264,7 +265,9 @@ pub fn compute_postcost_info(
     program: &Program,
     get_ap_change_fn: &dyn Fn(&StatementIdx) -> usize,
     precost_gas_info: &GasInfo,
+    enforced_costs: &OrderedHashMap<FunctionId, i32>,
 ) -> Result<GasInfo, CostError> {
+    println!("\n\n\n================\n\n\n");
     let registry = ProgramRegistry::<CoreType, CoreLibfunc>::new(program)?;
     let type_size_map = get_type_size_map(program, &registry).unwrap();
     let specific_cost_context =
@@ -278,5 +281,17 @@ pub fn compute_postcost_info(
             core_libfunc_cost_base::core_libfunc_cost(core_libfunc, &type_size_map)
         }),
         &specific_cost_context,
+        &enforced_costs
+            .iter()
+            .map(|(func, val)| {
+                (
+                    registry
+                        .get_function(func)
+                        .expect("Program registry creation would have already failed.")
+                        .entry_point,
+                    *val,
+                )
+            })
+            .collect(),
     )
 }

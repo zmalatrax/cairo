@@ -56,6 +56,18 @@ pub fn sub_maps<
     merge_maps(lhs, rhs, |a, b| a - b)
 }
 
+// TODO: remove
+pub fn sub_maps2<
+    Key: Hash + Eq,
+    Value: HasZero + Sub<Output = Value> + Clone + Eq,
+    Rhs: IntoIterator<Item = (Key, Value)>,
+>(
+    lhs: OrderedHashMap<Key, Value>,
+    rhs: Rhs,
+) -> OrderedHashMap<Key, Value> {
+    merge_maps2(lhs, rhs, |a, b| a - b)
+}
+
 /// Returns a map which contains the combination by using `action` of the values from the given two
 /// maps, for each key.
 ///
@@ -85,6 +97,32 @@ fn merge_maps<
                 if rhs_val != Value::zero() {
                     e.insert(action(Value::zero(), rhs_val));
                 }
+            }
+        }
+    }
+    res
+}
+
+// TODO: remove
+fn merge_maps2<
+    Key: Hash + Eq,
+    Value: HasZero + Clone + Eq,
+    Rhs: IntoIterator<Item = (Key, Value)>,
+    Action: Fn(Value, Value) -> Value,
+>(
+    lhs: OrderedHashMap<Key, Value>,
+    rhs: Rhs,
+    action: Action,
+) -> OrderedHashMap<Key, Value> {
+    let mut res = lhs;
+    for (key, rhs_val) in rhs {
+        match res.entry(key) {
+            Entry::Occupied(mut e) => {
+                let new_val = action(e.get().clone(), rhs_val);
+                e.insert(new_val);
+            }
+            Entry::Vacant(e) => {
+                e.insert(action(Value::zero(), rhs_val));
             }
         }
     }

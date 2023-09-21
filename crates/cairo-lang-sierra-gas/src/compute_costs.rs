@@ -1,3 +1,9 @@
+// TODO:
+// 1. Other gas tokens
+// 2. AP
+// 3. Withdraw gas builtins.
+// 4. refund gas
+
 use std::collections::hash_map;
 use std::ops::{Add, Sub};
 
@@ -16,6 +22,10 @@ use crate::gas_info::GasInfo;
 use crate::generate_equations::{calculate_reverse_topological_ordering, TopologicalOrderStatus};
 use crate::objects::{BranchCost, ConstCost, PreCost};
 use crate::CostError;
+
+#[cfg(test)]
+#[path = "compute_costs_test.rs"]
+mod test;
 
 type VariableValues = OrderedHashMap<(StatementIdx, CostTokenType), i64>;
 
@@ -90,10 +100,12 @@ pub fn compute_costs<
     program: &Program,
     get_cost_fn: &dyn Fn(&ConcreteLibfuncId) -> Vec<BranchCost>,
     specific_cost_context: &SpecificCostContext,
+    enforced_costs: &OrderedHashMap<StatementIdx, CostType>,
 ) -> Result<GasInfo, CostError> {
     let mut context = CostContext {
         program,
         get_cost_fn,
+        enforced_costs,
         costs: Default::default(),
         target_values: Default::default(),
     };
@@ -175,10 +187,12 @@ fn get_branch_requirements<
         .collect()
 }
 
-/// For every `branch_align` and `withdraw_gas` statements, computes the required cost variables.
+/// For every `branch_align`, `withdraw_gas` and `redeposit_gas` statements, computes the required
+/// variables.
 ///
 /// * For `branch_align` this is the amount of cost *reduced* from the wallet.
 /// * For `withdraw_gas` this is the amount that should be withdrawn and added to the wallet.
+/// * For `redeposit_gas` this is the amount that should be redeposited and removed from the wallet.
 fn analyze_gas_statements<
     CostType: CostTypeTrait,
     SpecificCostContext: SpecificCostContextTrait<CostType>,
@@ -228,6 +242,11 @@ fn analyze_gas_statements<
                     ),
                     None
                 );
+            }
+        } else if let BranchCost::RedepositGas = branch_cost {
+            let cost = wallet_value.clone() - branch_requirement.value.clone();
+            for (token_type, amount) in SpecificCostContext::to_full_cost_map(cost) {
+                assert_eq!(variable_values.insert((*idx, token_type), amount), None);
             }
         } else if invocation.branches.len() > 1 {
             let cost = wallet_value.clone() - branch_requirement.value.clone();
@@ -328,6 +347,7 @@ struct CostContext<'a, CostType: CostTypeTrait> {
     program: &'a Program,
     /// A callback function returning the cost of a libfunc for every output branch.
     get_cost_fn: &'a dyn Fn(&ConcreteLibfuncId) -> Vec<BranchCost>,
+    enforced_costs: &'a OrderedHashMap<StatementIdx, CostType>,
     /// The cost before executing a Sierra statement.
     costs: UnorderedHashMap<StatementIdx, WalletInfo<CostType>>,
     /// A partial map from StatementIdx to a requested lower bound on the wallet value.
@@ -477,10 +497,27 @@ impl<'a, CostType: CostTypeTrait> CostContext<'a, CostType> {
         excess: &mut UnorderedHashMap<StatementIdx, CostType>,
         finalized_excess_statements: &mut UnorderedHashSet<StatementIdx>,
     ) {
+        println!("Finalizing excess for {:?} (value: {:?}).", idx.0, excess.get(idx));
         finalized_excess_statements.insert(*idx);
 
         let wallet_value = self.wallet_at(idx).value;
-        let current_excess = excess.get(idx).cloned().unwrap_or_default();
+
+        let current_excess = if let Some(enforced_cost) = self.enforced_costs.get(idx) {
+            // No excess is expected at statement with enforced cost.
+            assert_eq!(excess.get(idx), None, "TODO"); // TODO
+
+            assert!(
+                enforced_cost
+                    == &CostType::max([enforced_cost.clone(), wallet_value.clone()].into_iter()),
+                "Cannot enforce cost of statement. Current cost ({wallet_value:?}) is bigger than \
+                 enforced cost ({enforced_cost:?})."
+            );
+            enforced_cost.clone() - wallet_value.clone()
+        } else {
+            excess.get(idx).cloned().unwrap_or_default()
+        };
+
+        println!("Excess for {idx} is {current_excess:?}"); // TODO: Remove this line.
 
         let invocation = match &self.program.get_statement(idx).unwrap() {
             Statement::Invocation(invocation) => invocation,
@@ -507,6 +544,10 @@ impl<'a, CostType: CostTypeTrait> CostContext<'a, CostType> {
             let branch_statement = idx.next(&branch_info.target);
             if finalized_excess_statements.contains(&branch_statement) {
                 // Don't update statements which were already visited.
+                println!(
+                    "Skipping excess for {branch_statement} to {excess:?} (value is {:?})",
+                    excess.get(&branch_statement)
+                ); // TODO: Remove this line.
                 return;
             }
 
@@ -542,10 +583,12 @@ impl<'a, CostType: CostTypeTrait> CostContext<'a, CostType> {
             // `actual_excess`.
             match excess.entry(branch_statement) {
                 hash_map::Entry::Occupied(mut entry) => {
+                    println!("Min excess for {branch_statement} to {actual_excess:?}"); // TODO: Remove this line.
                     let current_value = entry.get();
                     entry.insert(CostType::min2(current_value, &actual_excess));
                 }
                 hash_map::Entry::Vacant(entry) => {
+                    println!("Setting actual_excess for {branch_statement} to {actual_excess:?}"); // TODO: Remove this line.
                     entry.insert(actual_excess);
                 }
             }
@@ -625,10 +668,7 @@ impl SpecificCostContextTrait<PreCost> for PreCostContext {
                     Default::default()
                 }
             }
-            BranchCost::RedepositGas => {
-                // TODO(lior): Replace with actually redepositing the gas.
-                Default::default()
-            }
+            BranchCost::RedepositGas => Default::default(),
         };
         let future_wallet_value = wallet_at_fn(&idx.next(&branch_info.target));
         WalletInfo::from(branch_cost) + future_wallet_value

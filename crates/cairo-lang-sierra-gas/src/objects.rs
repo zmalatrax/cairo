@@ -73,6 +73,26 @@ impl std::ops::Sub for PreCost {
     }
 }
 
+/// Implements Ord for [PreCost].
+impl Ord for PreCost {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        for token in CostTokenType::iter_precost() {
+            let res = self.0.get(token).unwrap_or(&0).cmp(other.0.get(token).unwrap_or(&0));
+            if res != std::cmp::Ordering::Equal {
+                return res;
+            }
+        }
+        std::cmp::Ordering::Equal
+    }
+}
+
+/// Implements PartialOrd for [PreCost].
+impl PartialOrd for PreCost {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
 /// The cost of executing a libfunc for a specific output branch.
 #[derive(Clone, Debug)]
 pub enum BranchCost {
