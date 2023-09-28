@@ -528,9 +528,10 @@ impl<'a, CostType: CostTypeTrait> CostContext<'a, CostType> {
                     let additional_excess = wallet_value.clone() - branch_requirement.value;
                     actual_excess = actual_excess + CostType::rectify(&additional_excess);
                 }
+            } else if let BranchCost::RedepositGas = branch_cost {
+                // All the excess can be redeposited.
+                actual_excess = Default::default();
             }
-
-            // TODO(lior): Modify actual_excess for `redeposit_gas`.
 
             // Update the excess for `branch_statement` using the minimum of the existing excess and
             // `actual_excess`.
