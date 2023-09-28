@@ -289,7 +289,12 @@ impl<CostType: CostTypeTrait> WalletInfo<CostType> {
 
         // If there are multiple branches, there must be a branch_align in each of them, which
         // can be used to increase the wallet value up to the target value.
-        if n_branches > 1 {
+        let is_branch_align = n_branches > 1;
+        // If this is `redeposit_gas`, the wallet value can be increased up to the target value,
+        // by redepositing the difference.
+        let is_redeposit = matches!(branch_costs[..], [BranchCost::RedepositGas]);
+
+        if is_branch_align || is_redeposit {
             if let Some(target_value) = target_value {
                 // If the target value is greater than the maximum value of the branches, use
                 // the target value.
