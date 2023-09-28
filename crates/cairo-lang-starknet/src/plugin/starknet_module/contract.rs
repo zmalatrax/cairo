@@ -391,9 +391,9 @@ fn handle_contract_impl(
     let impl_name_node = RewriteNode::new_trimmed(impl_name.as_syntax_node());
     for item in impl_body.items(db).elements(db) {
         if abi_config == ImplAbiConfig::Embed {
-            forbid_attributes_in_impl(db, diagnostics, &item, "#[abi(embed_v0)]");
+            forbid_attributes_in_impl(db, diagnostics, &item, "`abi(embed_v0)`");
         } else if abi_config == ImplAbiConfig::External {
-            forbid_attributes_in_impl(db, diagnostics, &item, "#[external(v0)]");
+            forbid_attributes_in_impl(db, diagnostics, &item, "`external(v0)`");
         }
 
         let ast::ImplItem::Function(item_function) = item else {

@@ -243,7 +243,7 @@ pub fn forbid_attribute_in_impl(
         diagnostics.push(PluginDiagnostic {
             message: format!(
                 "The `{attr_name}` attribute is not allowed inside an impl marked as \
-                 `{embedded_impl_attr}`."
+                 {embedded_impl_attr}."
             ),
             stable_ptr: attr.stable_ptr().untyped(),
         });

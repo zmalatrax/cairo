@@ -2015,32 +2015,32 @@ mod test_contract {
 }
 
 //! > expected_diagnostics
-error: Plugin diagnostic: The `external` attribute is not allowed inside an impl marked as `#[external(v0)]`.
+error: Plugin diagnostic: The `external` attribute is not allowed inside an impl marked as `external(v0)`.
  --> lib.cairo:16:9
         #[external(v0)]
         ^*************^
 
-error: Plugin diagnostic: The `l1_handler` attribute is not allowed inside an impl marked as `#[external(v0)]`.
+error: Plugin diagnostic: The `l1_handler` attribute is not allowed inside an impl marked as `external(v0)`.
  --> lib.cairo:18:9
         #[l1_handler]
         ^***********^
 
-error: Plugin diagnostic: The `constructor` attribute is not allowed inside an impl marked as `#[external(v0)]`.
+error: Plugin diagnostic: The `constructor` attribute is not allowed inside an impl marked as `external(v0)`.
  --> lib.cairo:20:9
         #[constructor]
         ^************^
 
-error: Plugin diagnostic: The `external` attribute is not allowed inside an impl marked as `#[external(v0)]`.
+error: Plugin diagnostic: The `external` attribute is not allowed inside an impl marked as `external(v0)`.
  --> lib.cairo:27:9
         #[external(v0)]
         ^*************^
 
-error: Plugin diagnostic: The `l1_handler` attribute is not allowed inside an impl marked as `#[external(v0)]`.
+error: Plugin diagnostic: The `l1_handler` attribute is not allowed inside an impl marked as `external(v0)`.
  --> lib.cairo:29:9
         #[l1_handler]
         ^***********^
 
-error: Plugin diagnostic: The `constructor` attribute is not allowed inside an impl marked as `#[external(v0)]`.
+error: Plugin diagnostic: The `constructor` attribute is not allowed inside an impl marked as `external(v0)`.
  --> lib.cairo:31:9
         #[constructor]
         ^************^
@@ -4200,17 +4200,17 @@ impl EmbeddableImpl<TContractState> of Interface<TContractState> {
 }
 
 //! > expected_diagnostics
-error: Plugin diagnostic: The `external` attribute is not allowed inside an impl marked as `#[embeddable]`.
+error: Plugin diagnostic: The `external` attribute is not allowed inside an impl marked as `embeddable`/`embeddable_as`.
  --> lib.cairo:9:5
     #[external(v0)]
     ^*************^
 
-error: Plugin diagnostic: The `l1_handler` attribute is not allowed inside an impl marked as `#[embeddable]`.
+error: Plugin diagnostic: The `l1_handler` attribute is not allowed inside an impl marked as `embeddable`/`embeddable_as`.
  --> lib.cairo:11:5
     #[l1_handler]
     ^***********^
 
-error: Plugin diagnostic: The `constructor` attribute is not allowed inside an impl marked as `#[embeddable]`.
+error: Plugin diagnostic: The `constructor` attribute is not allowed inside an impl marked as `embeddable`/`embeddable_as`.
  --> lib.cairo:13:5
     #[constructor]
     ^************^
@@ -4743,17 +4743,17 @@ mod contract {
 }
 
 //! > expected_diagnostics
-error: Plugin diagnostic: Plugin diagnostic: The `external` attribute is not allowed inside an impl marked as `#[embeddable]`.
+error: Plugin diagnostic: Plugin diagnostic: The `external` attribute is not allowed inside an impl marked as `embeddable`/`embeddable_as`.
  --> lib.cairo:14:9
         #[external(v0)]
         ^*************^
 
-error: Plugin diagnostic: Plugin diagnostic: The `l1_handler` attribute is not allowed inside an impl marked as `#[embeddable]`.
+error: Plugin diagnostic: Plugin diagnostic: The `l1_handler` attribute is not allowed inside an impl marked as `embeddable`/`embeddable_as`.
  --> lib.cairo:16:9
         #[l1_handler]
         ^***********^
 
-error: Plugin diagnostic: Plugin diagnostic: The `constructor` attribute is not allowed inside an impl marked as `#[embeddable]`.
+error: Plugin diagnostic: Plugin diagnostic: The `constructor` attribute is not allowed inside an impl marked as `embeddable`/`embeddable_as`.
  --> lib.cairo:18:9
         #[constructor]
         ^************^

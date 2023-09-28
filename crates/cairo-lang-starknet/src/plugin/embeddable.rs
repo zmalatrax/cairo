@@ -110,8 +110,7 @@ pub fn handle_embeddable(db: &dyn SyntaxGroup, item_impl: ast::ItemImpl) -> Plug
     };
     let mut data = EntryPointsGenerationData::default();
     for item in body.items(db).elements(db) {
-        // TODO(yuval): do the same in embeddable_As, to get a better diagnostic.
-        forbid_attributes_in_impl(db, &mut diagnostics, &item, "#[embeddable]");
+        forbid_attributes_in_impl(db, &mut diagnostics, &item, "`embeddable`/`embeddable_as`");
         let ast::ImplItem::Function(item_function) = item else {
             continue;
         };
