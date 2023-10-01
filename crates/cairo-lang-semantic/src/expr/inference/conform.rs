@@ -288,8 +288,10 @@ impl<'db> InferenceConform for Inference<'db> {
     ) -> InferenceResult<bool> {
         for garg in generic_args {
             if match garg {
+                // TODO(yg)
                 GenericArgumentId::Type(ty) => self.ty_contains_var(*ty, var)?,
                 GenericArgumentId::Literal(_) => false,
+                // TODO(yg)
                 GenericArgumentId::Impl(impl_id) => self.impl_contains_var(impl_id, var)?,
             } {
                 return Ok(true);

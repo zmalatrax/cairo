@@ -387,8 +387,10 @@ impl DebugWithDb<dyn SemanticGroup> for ConcreteFunctionWithBody {
             write!(f, "::<")?;
             for (i, arg) in self.generic_args.iter().enumerate() {
                 if i > 0 {
+                    // TODO(yg)
                     write!(f, ", ")?;
                 }
+                // TODO(yg)
                 write!(f, "{:?}", arg.debug(db))?;
             }
             write!(f, ">")?;
@@ -489,8 +491,10 @@ impl DebugWithDb<dyn SemanticGroup> for ConcreteFunction {
             write!(f, "::<")?;
             for (i, arg) in self.generic_args.iter().enumerate() {
                 if i > 0 {
+                    // TODO(yg)
                     write!(f, ", ")?;
                 }
+                // TODO(yg)
                 write!(f, "{:?}", arg.debug(db))?;
             }
             write!(f, ">")?;

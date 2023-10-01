@@ -1275,6 +1275,7 @@ fn maybe_compute_pattern_semantic(
                 match pattern_param_ast {
                     PatternStructParam::Single(single) => {
                         let name = single.name(syntax_db);
+                        // TODO(yg)
                         let member = get_member(ctx, name.text(syntax_db)).to_maybe()?;
                         let ty = wrap_in_snapshots(ctx.db, member.ty, n_snapshots);
                         let pattern = create_variable_pattern(
@@ -1288,6 +1289,7 @@ fn maybe_compute_pattern_semantic(
                     }
                     PatternStructParam::WithExpr(with_expr) => {
                         let member = get_member(ctx, with_expr.name(syntax_db).text(syntax_db))
+                        // TODO(yg)
                             .to_maybe()?;
                         let ty = wrap_in_snapshots(ctx.db, member.ty, n_snapshots);
                         let pattern =
@@ -1424,6 +1426,7 @@ fn struct_ctor_expr(
         let arg_expr = match arg.arg_expr(syntax_db) {
             ast::OptionStructArgExpr::Empty(_) => {
                 let expr =
+                // TODO(yg)
                     resolve_variable_by_name(ctx, &arg_identifier, path.stable_ptr().into())?;
                 ExprAndId { expr: expr.clone(), id: ctx.exprs.alloc(expr) }
             }
@@ -1616,6 +1619,7 @@ fn method_call_expr(
     // Add traits from impl generic args in the context.
     for generic_param in &ctx.resolver.data.generic_params {
         if generic_param.kind(ctx.db.upcast()) == GenericKind::Impl {
+            // TODO(yg)
             let trait_id = ctx.db.generic_impl_param_trait(*generic_param)?;
             candidate_traits.insert(trait_id);
         }

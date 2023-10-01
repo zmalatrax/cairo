@@ -82,8 +82,10 @@ impl DebugWithDb<dyn SemanticGroup> for ConcreteImplLongId {
             write!(f, "::<")?;
             for (i, arg) in self.generic_args.iter().enumerate() {
                 if i > 0 {
+                    // TODO(yg)
                     write!(f, ", ")?;
                 }
+                // TODO(yg)
                 write!(f, "{:?}", arg.debug(db))?;
             }
             write!(f, ">")?;
@@ -871,13 +873,16 @@ pub fn find_candidates_at_context(
         if !matches!(generic_param_id.kind(db.upcast()), GenericKind::Impl) {
             continue;
         };
+        // TODO(yg)
         let trait_id = db.generic_impl_param_trait(*generic_param_id)?;
         if filter.trait_id != trait_id {
             continue;
         }
         let param =
+        // TODO(yg)
             extract_matches!(db.generic_param_semantic(*generic_param_id)?, GenericParam::Impl);
         let Ok(imp_concrete_trait_id) = param.concrete_trait else { continue };
+        // TODO(yg)
         if !concrete_trait_fits_trait_filter(db, imp_concrete_trait_id, &filter)? {
             continue;
         }
@@ -885,6 +890,7 @@ pub fn find_candidates_at_context(
     }
     let core_module = core_module(db);
     for module_id in chain!(lookup_context.modules.iter().map(|x| &x.0), [&core_module]) {
+        // TODO(yg)
         let imps = db.module_impl_ids_for_trait_filter(*module_id, filter.clone())?;
         for imp in imps {
             res.insert(imp);
@@ -987,6 +993,7 @@ pub fn filter_candidate_traits(
 ) -> Maybe<Vec<TraitFunctionId>> {
     let mut candidates = Vec::new();
     for trait_id in candidate_traits.iter().copied() {
+        // TODO(yg): fixed?
         for (name, trait_function) in ctx.db.trait_functions(trait_id)? {
             if name == function_name
                 && can_infer_impl_by_self(ctx, trait_function, self_ty, stable_ptr)

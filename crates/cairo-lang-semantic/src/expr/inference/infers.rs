@@ -214,8 +214,10 @@ impl<'db> InferenceEmbeddings for Inference<'db> {
         for generic_param in generic_params {
             let generic_param = SubstitutionRewriter { db: self.db, substitution: &substitution }
                 .rewrite(*generic_param)
+                // TODO(yg)
                 .map_err(InferenceError::Failed)?;
             let generic_arg =
+            // TODO(yg)
                 self.infer_generic_arg(&generic_param, lookup_context.clone(), stable_ptr)?;
             generic_args.push(generic_arg);
             substitution.0.insert(generic_param.id(), generic_arg);

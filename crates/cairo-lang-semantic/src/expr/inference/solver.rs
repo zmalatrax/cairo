@@ -133,6 +133,7 @@ impl Solver {
     ) -> InferenceResult<SolutionSet<CanonicalImpl>> {
         let mut unique_solution: Option<CanonicalImpl> = None;
         for candidate_solver in &mut self.candidate_solvers {
+            // TODO(yg)
             let candidate_solution_set = candidate_solver.solution_set(db)?;
             let candidate_solution = match candidate_solution_set {
                 SolutionSet::None => continue,

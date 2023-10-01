@@ -385,6 +385,7 @@ impl<'db> Inference<'db> {
         let mut ambiguous = std::mem::take(&mut self.ambiguous);
         self.pending.extend(ambiguous.drain(..).map(|(var, _)| var));
         while let Some(var) = self.pending.pop_front() {
+            // TODO(yg)
             let solution = match self.impl_var_solution_set(var)? {
                 SolutionSet::None => {
                     self.refuted.push(var);
@@ -398,6 +399,7 @@ impl<'db> Inference<'db> {
             };
 
             // Solution found. Assign it.
+            // TODO(yg)
             self.assign_local_impl(var, solution)?;
 
             // Something changed.

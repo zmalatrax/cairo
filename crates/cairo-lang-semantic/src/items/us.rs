@@ -71,6 +71,7 @@ pub fn get_use_segments(
 fn get_parent_use_path(db: &dyn SyntaxGroup, use_path: &ast::UsePath) -> Option<ast::UsePath> {
     let mut node = use_path.as_syntax_node();
     loop {
+        // TODO(yg)
         node = node.parent()?;
         return match node.kind(db) {
             SyntaxKind::ItemUse => None,

@@ -220,6 +220,7 @@ impl<'db> Resolver<'db> {
             // [NotFoundItemType::Identifier].
             let cur_item_type =
                 if segments.peek().is_some() { NotFoundItemType::Identifier } else { item_type };
+            // TODO(yg)
             item = self.resolve_next_concrete(
                 diagnostics,
                 &item,
@@ -337,6 +338,7 @@ impl<'db> Resolver<'db> {
             // [NotFoundItemType::Identifier].
             let cur_item_type =
                 if segments.peek().is_some() { NotFoundItemType::Identifier } else { item_type };
+            // TODO(yg)
             item = self.resolve_next_generic(diagnostics, &item, &identifier, cur_item_type)?;
             self.resolved_items.mark_generic(db, segment, item.clone());
         }
@@ -831,6 +833,7 @@ impl<'db> Resolver<'db> {
                     if last_named_arg_index.is_some() {
                         return Err(diagnostics.report(arg_syntax, PositionalGenericAfterNamed));
                     }
+                    // TODO(yg)
                     let generic_param = generic_params.get(i).ok_or_else(|| {
                         diagnostics.report(
                             arg_syntax,
@@ -851,8 +854,10 @@ impl<'db> Resolver<'db> {
         }
 
         for generic_param in generic_params.iter() {
+            // TODO(yg)
             let generic_param = SubstitutionRewriter { db: self.db, substitution: &substitution }
                 .rewrite(*generic_param)?;
+            // TODO(yg)
             let generic_arg = self.resolve_generic_arg(
                 generic_param,
                 arg_syntax_for_param

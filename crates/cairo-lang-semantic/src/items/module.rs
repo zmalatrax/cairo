@@ -49,6 +49,7 @@ pub fn priv_module_semantic_data(
         };
 
         if items.insert(name.clone(), *item).is_some() {
+            // TODO(yg)
             let stable_location =
                 StableLocation::new(db.module_item_name_stable_ptr(module_id, *item)?);
             let kind = SemanticDiagnosticKind::NameDefinedMultipleTimes { name: name.clone() };
@@ -73,6 +74,7 @@ pub fn module_scope(db: &dyn SemanticGroup, module_id: ModuleId) -> Maybe<Arc<Sc
     let mut generic_items = OrderedHashMap::default();
     // Note: this is done in a separate query, since it contains resolved `use` items.
     for (name, module_item) in module_data.items.iter() {
+        // TODO(yg): removed.
         generic_items
             .insert(name.clone(), ResolvedGenericItem::from_module_item(db, *module_item)?);
     }
@@ -110,17 +112,21 @@ pub fn module_usable_trait_ids(
         OrderedHashSet::from_iter(db.module_traits_ids(module_id)?.deref().clone());
     // Add traits from impls in the module.
     for imp in db.module_impls_ids(module_id)?.iter().copied() {
+        // TODO(yg): fixed
         let trait_id = db.impl_def_trait(imp)?;
         module_traits.insert(trait_id);
     }
     // Add traits from impl aliases in the module.
     for alias in db.module_impl_aliases_ids(module_id)?.iter().copied() {
+        // TODO(yg): fixed
         let impl_id = db.impl_alias_impl_def(alias)?;
+        // TODO(yg): fixed
         let trait_id = db.impl_def_trait(impl_id)?;
         module_traits.insert(trait_id);
     }
     // Add traits from uses in the module.
     for use_id in db.module_uses_ids(module_id)?.iter().copied() {
+        // TODO(yg): fixed
         match db.use_resolved_item(use_id)? {
             // use of a trait.
             ResolvedGenericItem::Trait(trait_id) => {
@@ -128,6 +134,7 @@ pub fn module_usable_trait_ids(
             }
             // use of an impl from which we get the trait.
             ResolvedGenericItem::Impl(impl_def_id) => {
+                // TODO(yg): fixed
                 module_traits.insert(db.impl_def_trait(impl_def_id)?);
             }
             _ => {}
