@@ -512,12 +512,14 @@ fn build_u256_inv_mod_n(
         // No need for Limb 0 validations - since we didn't actually calculate it.
 
         // Validate limb1 for `b` and `n`.
-        // We know that limb2 and limb3 should be 0.
+        // We know that for honest prover (completeness) `limb2` and `limb3` are 0.
         // Therefore, `g1` is 0 or both `bdg1` and `ndg1` are 0.
         // We also know that g0*bdg1, g1*bdg0, g0*ndg1 and g1*ndg0 should be smaller than 2**128.
         // Therefore, the smaller of each pair must be smaller than 2**64.
         // So by checking this we can avoid overflow in the field.
-        // And we can instead check that the sum of small items of both is smaller than 2**65.
+        // In fact, instead of checking that two items are smaller than 2**64, we can
+        // check that their sum is smaller than 2**65.
+        // TODO: consider giving names to b_div_g and n_div_g. E.g., `s`, `t`.
         tempvar gbdg1;
         tempvar gndg1;
         tempvar smalls_sum;
