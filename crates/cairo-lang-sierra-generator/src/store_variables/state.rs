@@ -1,3 +1,4 @@
+use assert_matches::assert_matches;
 use cairo_lang_sierra as sierra;
 use cairo_lang_sierra::extensions::lib_func::{
     BranchSignature, DeferredOutputKind, OutputVarInfo, SierraApChange,
@@ -7,6 +8,7 @@ use cairo_lang_utils::casts::IntoOrPanic;
 use cairo_lang_utils::ordered_hash_map::OrderedHashMap;
 
 use super::known_stack::KnownStack;
+use crate::db::SierraGenGroup;
 
 /// Represents the known information about a Sierra variable which contains a deferred value.
 /// For example, `[ap - 1] + [ap - 2]`.
@@ -60,6 +62,7 @@ impl VariablesState {
     /// Clears the stack if needed.
     pub fn register_outputs(
         &mut self,
+        db: &dyn SierraGenGroup,
         results: &[sierra::ids::VarId],
         branch_signature: &BranchSignature,
         args: &[sierra::ids::VarId],
@@ -78,6 +81,9 @@ impl VariablesState {
         }
 
         for (var, var_info) in itertools::zip_eq(results, &branch_signature.vars) {
+            if db.get_type_info(var_info.ty.clone()).unwrap().zero_sized {
+                assert_matches!(var_info.ref_info, OutputVarReferenceInfo::ZeroSized);
+            }
             self.register_output(var.clone(), var_info, args, arg_states);
         }
 

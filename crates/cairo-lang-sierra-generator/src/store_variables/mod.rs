@@ -183,6 +183,7 @@ impl<'a> AddStoreVariableStatements<'a> {
                         }
 
                         state.register_outputs(
+                            self.db,
                             results,
                             branch_signature,
                             &invocation.args,
@@ -204,6 +205,7 @@ impl<'a> AddStoreVariableStatements<'a> {
                         {
                             let mut state_at_branch = state.clone();
                             state_at_branch.register_outputs(
+                                self.db,
                                 &branch.results,
                                 &branch_signature,
                                 &invocation.args,
