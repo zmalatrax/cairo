@@ -1,4 +1,5 @@
 mod array;
+mod assert;
 mod consteval_int;
 mod format;
 mod panic;
@@ -13,6 +14,7 @@ use cairo_lang_syntax::node::helpers::WrappedArgListHelper;
 use cairo_lang_syntax::node::TypedSyntaxNode;
 use cairo_lang_utils::ordered_hash_map::OrderedHashMap;
 
+use self::assert::AssertMacro;
 use self::format::FormatMacro;
 use self::panic::PanicMacro;
 use self::print::PrintMacro;
@@ -28,6 +30,7 @@ pub fn get_default_inline_macro_plugins() -> OrderedHashMap<String, Arc<dyn Inli
     res.insert("format".to_string(), Arc::new(FormatMacro));
     res.insert("print".to_string(), Arc::new(PrintMacro));
     res.insert("panic".to_string(), Arc::new(PanicMacro));
+    res.insert("assert".to_string(), Arc::new(AssertMacro));
     res
 }
 

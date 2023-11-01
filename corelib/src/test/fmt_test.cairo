@@ -25,4 +25,3 @@ fn test_print() {
     // With an integer.
     print!("{}", 97_usize);
 }
-

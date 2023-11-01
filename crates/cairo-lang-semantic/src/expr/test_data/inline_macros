@@ -346,6 +346,125 @@ foo
 //! > module_code
 
 //! > expected_diagnostics
+error: Plugin diagnostic: Macro `panic` does not support this bracket type.
+ --> lib.cairo:5:4
+   panic!["{}", ba];
+   ^**************^
+
+error: Inline macro `panic` failed.
+ --> lib.cairo:5:4
+   panic!["{}", ba];
+   ^**************^
+
+error: Plugin diagnostic: `panic` macro must have up to 2 unnamed arguments.
+ --> lib.cairo:11:4
+   panic!("{}", ba, 1);
+   ^*****************^
+
+error: Inline macro `panic` failed.
+ --> lib.cairo:11:4
+   panic!("{}", ba, 1);
+   ^*****************^
+
+error: Plugin diagnostic: Currently `format` macro only supports `"{}"` as the first argument (format string).
+ --> lib.cairo[print_macro]:2:56
+                        panics::panic_with_byte_array(@format!("{}{}", ba));
+                                                       ^*****************^
+
+error: Inline macro `format` failed.
+ --> lib.cairo[print_macro]:2:56
+                        panics::panic_with_byte_array(@format!("{}{}", ba));
+                                                       ^*****************^
+
+//! > ==========================================================================
+
+//! > Test bad assert! macros
+
+//! > test_runner_name
+test_function_diagnostics(expect_diagnostics: true)
+
+//! > function
+fn foo() {
+   let ba: ByteArray = "panic data";
+
+   // Bad brackets.
+   assert![1 == 1, "{}", ba];
+
+   // No arguments.
+   assert!();
+
+   // First argument is not an expression.
+   assert!("{}", ba, 1);
+
+   // Rest of the arguments don't fit into format!/panic!.
+   // No format string.
+   assert!(1 == 1, ba);
+   // Too many arguments.
+   assert!(1 == 1, "{}", ba, 1);
+   // Format string is not "{}".
+   assert!(1 == 1, "{}{}", ba);
+}
+
+//! > function_name
+foo
+
+//! > module_code
+
+//! > expected_diagnostics
+error: Plugin diagnostic: Macro `assert` does not support this bracket type.
+ --> lib.cairo:5:4
+   assert![1 == 1, "{}", ba];
+   ^***********************^
+
+error: Inline macro `assert` failed.
+ --> lib.cairo:5:4
+   assert![1 == 1, "{}", ba];
+   ^***********************^
+
+error: Plugin diagnostic: `assert` macro must have at least one unnamed argument (condition).
+ --> lib.cairo:8:4
+   assert!();
+   ^*******^
+
+error: Inline macro `assert` failed.
+ --> lib.cairo:8:4
+   assert!();
+   ^*******^
+
+error: Plugin diagnostic: Currently `format` macro only supports `"{}"` as the first argument (format string).
+ --> lib.cairo[print_macro][print_macro]:2:56
+                        panics::panic_with_byte_array(@format!(ba, 1));
+                                                       ^************^
+
+error: Inline macro `format` failed.
+ --> lib.cairo[print_macro][print_macro]:2:56
+                        panics::panic_with_byte_array(@format!(ba, 1));
+                                                       ^************^
+
+error: Plugin diagnostic: `panic` macro must have up to 2 unnamed arguments.
+ --> lib.cairo[print_macro]:3:29
+                            panic!("{}", ba, 1);
+                            ^*****************^
+
+error: Inline macro `panic` failed.
+ --> lib.cairo[print_macro]:3:29
+                            panic!("{}", ba, 1);
+                            ^*****************^
+
+error: Plugin diagnostic: Currently `format` macro only supports `"{}"` as the first argument (format string).
+ --> lib.cairo[print_macro][print_macro]:2:56
+                        panics::panic_with_byte_array(@format!("{}{}", ba));
+                                                       ^*****************^
+
+error: Inline macro `format` failed.
+ --> lib.cairo[print_macro][print_macro]:2:56
+                        panics::panic_with_byte_array(@format!("{}{}", ba));
+                                                       ^*****************^
+
+error: Plugin diagnostic: Mismatched types. The type core::bool cannot be created from a string literal.
+ --> lib.cairo:11:12
+   assert!("{}", ba, 1);
+           ^**^
 
 //! > ==========================================================================
 
