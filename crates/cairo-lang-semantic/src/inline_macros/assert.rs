@@ -50,25 +50,40 @@ impl InlineMacroExprPlugin for AssertMacro {
                     }];
                     return InlinePluginResult { code: None, diagnostics };
                 };
-                let panic_args =
-                    RewriteNode::interspersed(tail.into_iter(), RewriteNode::text(", "));
-                // TODO(yg): add "Assertion failed: ". For this, support a single arg in format,
-                // then call format!($panic_args$) and prepend the prefix for the panic.
-                builder.add_modified(RewriteNode::interpolate_patched(
-                    r#"{
-                        if !($condition$) {
-                            panic!($panic_args$);
-                        }
-                    }"#,
-                    &[
-                        (
+                if tail.len() == 0 {
+                    builder.add_modified(RewriteNode::interpolate_patched(
+                        r#"{
+                            if !($condition$) {
+                                let ba: ByteArray = "Assertion failed";
+                                panic!(ba);
+                            }
+                        }"#,
+                        &[(
                             "condition".to_string(),
                             RewriteNode::new_trimmed(condition.as_syntax_node()),
-                        ),
-                        ("panic_args".to_string(), panic_args),
-                    ]
-                    .into(),
-                ));
+                        )]
+                        .into(),
+                    ));
+                } else {
+                    let panic_args =
+                        RewriteNode::interspersed(tail.into_iter(), RewriteNode::text(", "));
+                    builder.add_modified(RewriteNode::interpolate_patched(
+                        r#"{
+                            if !($condition$) {
+                                let ba: ByteArray = "Assertion failed: " + format!($panic_args$);
+                                panic!(ba);
+                            }
+                        }"#,
+                        &[
+                            (
+                                "condition".to_string(),
+                                RewriteNode::new_trimmed(condition.as_syntax_node()),
+                            ),
+                            ("panic_args".to_string(), panic_args),
+                        ]
+                        .into(),
+                    ));
+                }
             }
             _ => {
                 let diagnostics = vec![PluginDiagnostic {
