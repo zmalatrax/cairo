@@ -713,6 +713,7 @@ pub fn compute_expr_block_semantic(
 
     ctx.run_in_subscope(|new_ctx| {
         let mut statements = syntax.statements(syntax_db).elements(syntax_db);
+        println!("#stmnts: {}", statements.len());
         // Remove the tail expression, if exists.
         // TODO(spapini): Consider splitting tail expression in the parser.
         let tail = get_tail_expression(syntax_db, statements.as_slice());
@@ -1932,10 +1933,23 @@ fn expr_function_call(
     let signature = ctx.db.concrete_function_signature(function_id)?;
 
     if named_args.len() != signature.params.len() {
-        return Err(ctx.diagnostics.report_by_ptr(
+        println!("yg1");
+        ctx.diagnostics.report_by_ptr(
             stable_ptr.untyped(),
             WrongNumberOfArguments { expected: signature.params.len(), actual: named_args.len() },
-        ));
+        );
+        let expr_function_call = ExprFunctionCall {
+            function: function_id,
+            // TODO(yg): consider adding the args that do exist.
+            args: Vec::new(),
+            ty: signature.return_type,
+            stable_ptr,
+        };
+        return Ok(Expr::FunctionCall(expr_function_call));
+        // return Err(ctx.diagnostics.report_by_ptr(
+        //     stable_ptr.untyped(),
+        //     WrongNumberOfArguments { expected: signature.params.len(), actual: named_args.len()
+        // }, ));
     }
 
     // Check argument names and types.

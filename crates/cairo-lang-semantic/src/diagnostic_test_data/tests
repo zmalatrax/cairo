@@ -449,6 +449,80 @@ warning: Unhandled `#[must_use]` function.
 
 //! > ==========================================================================
 
+//! > Test unhandled must-use functions warnings even with error diagnostics on the functions.
+
+//! > test_runner_name
+test_expr_diagnostics
+
+//! > expr_code
+{
+  // Free function.
+  must_use_free_function(111);
+
+  // Trait function.
+  trt::<u32>::must_use_trait_function(111);
+
+  // Method.
+  let x: u32 = 1;
+  x.must_use_method(111);
+}
+
+//! > module_code
+trait trt<T> {
+  #[must_use]
+  fn must_use_trait_function() -> u32;
+  #[must_use]
+  fn must_use_method(self: T) -> u32;
+}
+impl imp of trt<u32> {
+  fn must_use_method(self: u32) -> u32 {
+    0
+  }
+  fn must_use_trait_function() -> u32 {
+    0
+  }
+}
+
+#[must_use]
+fn must_use_free_function() -> u32 {
+  0
+}
+
+//! > function_body
+
+//! > expected_diagnostics
+error: Wrong number of arguments. Expected 0, found: 1
+ --> lib.cairo:23:3
+  must_use_free_function(111);
+  ^*************************^
+
+warning: Unhandled `#[must_use]` function.
+ --> lib.cairo:23:3
+  must_use_free_function(111);
+  ^*************************^
+
+error: Wrong number of arguments. Expected 0, found: 1
+ --> lib.cairo:26:3
+  trt::<u32>::must_use_trait_function(111);
+  ^**************************************^
+
+warning: Unhandled `#[must_use]` function.
+ --> lib.cairo:26:3
+  trt::<u32>::must_use_trait_function(111);
+  ^**************************************^
+
+error: Wrong number of arguments. Expected 1, found: 2
+ --> lib.cairo:30:3
+  x.must_use_method(111);
+  ^********************^
+
+warning: Unhandled `#[must_use]` function.
+ --> lib.cairo:30:3
+  x.must_use_method(111);
+  ^********************^
+
+//! > ==========================================================================
+
 //! > Test tail expression must use function.
 
 //! > test_runner_name
