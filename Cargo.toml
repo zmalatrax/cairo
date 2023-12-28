@@ -1,5 +1,5 @@
 [profile.release]
-overflow-checks = true     # Enable integer overflow checks.
+overflow-checks = true # Enable integer overflow checks.
 
 [profile.release-with-debug]
 inherits = "release"
@@ -65,8 +65,8 @@ ark-secp256r1 = "0.4.0"
 ark-std = "0.4.0"
 assert_matches = "1.5"
 bimap = "0.6.3"
-cairo-felt = "0.8.2"
-cairo-vm = "0.8.2"
+cairo-felt = { git = "https://github.com/elintul/cairo-vm.git", branch = "elin/ec-op/projective-point" }
+cairo-vm = { git = "https://github.com/elintul/cairo-vm.git", branch = "elin/ec-op/projective-point" }
 clap = { version = "4.4", features = ["derive"] }
 colored = "2"
 const-fnv1a-hash = "1.1.0"
