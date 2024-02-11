@@ -717,6 +717,16 @@ impl<'db> Resolver<'db> {
                 self.validate_item_visibility(diagnostics, *module_id, identifier, &item_info);
                 ResolvedGenericItem::from_module_item(self.db, item_info.item_id)
             }
+            // ResolvedGenericItem::Trait(trait_id) => {
+            //     // TODO(yuval): check trait's visibility? I think it's not needed as it's already
+            //     // checked before.
+            //     let item_info = self
+            //         .db
+            //         .trait_item_by_name(*trait_id, ident)
+            //         .ok_or_else(|| diagnostics.report(identifier, PathNotFound(item_type)))?;
+            //     ResolvedGenericItem::from_trait_item(self.db, item_info.item_id)
+            // }
+            // TODO(yg): same for impl.
             ResolvedGenericItem::GenericType(GenericTypeId::Enum(enum_id)) => {
                 let variants = self.db.enum_variants(*enum_id)?;
                 let variant_id = variants.get(&ident).ok_or_else(|| {
@@ -769,6 +779,9 @@ impl<'db> Resolver<'db> {
 
         // If an item with this name is found inside the current module, use the current module.
         if let Ok(Some(_)) = self.db.module_item_by_name(self.module_file_id.0, ident.clone()) {
+            if ident == "MyTrait" {
+                println!("yg in current module: {} in {:?}", ident, self.module_file_id.0);
+            }
             return Some(self.module_file_id.0);
         }
 

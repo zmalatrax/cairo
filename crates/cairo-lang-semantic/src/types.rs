@@ -32,6 +32,8 @@ pub enum TypeLongId {
     Tuple(Vec<TypeId>),
     Snapshot(TypeId),
     GenericParameter(GenericParamId),
+    // TODO(yg): add a variant here for trait type, and do similar to generic type as in
+    // determine_base_item_in_local_scope.
     Var(TypeVar),
     Missing(#[dont_rewrite] DiagnosticAdded),
 }

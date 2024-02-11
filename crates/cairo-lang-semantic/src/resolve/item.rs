@@ -63,6 +63,17 @@ impl ResolvedGenericItem {
         })
     }
 
+    // /// Wraps a TraitItem with the corresponding ResolveGenericItem.
+    // pub fn from_trait_item(
+    //     db: &dyn SemanticGroup,
+    //     trait_item: TraitItemId,
+    // ) -> Maybe<ResolvedGenericItem> {
+    //     Ok(match trait_item {
+    //         TraitItemId::Function(id) => todo!(),
+    //         TraitItemId::Type(id) => ResolvedGenericItem::GenericTypeAlias(id),
+    //     })
+    // }
+
     pub fn full_path(&self, db: &dyn SemanticGroup) -> String {
         let defs_db = db.upcast();
         match self {
