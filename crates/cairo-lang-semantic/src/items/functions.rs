@@ -748,6 +748,7 @@ fn ast_param_to_semantic(
 
     let id = db.intern_param(ParamLongId(resolver.module_file_id, ast_param.stable_ptr()));
     let ty_syntax = ast_param.type_clause(syntax_db).ty(syntax_db);
+    // TODO(ygg): temporary solution: reduce trait item once.
     let ty = resolve_type(db, diagnostics, resolver, &ty_syntax);
 
     let mutability = modifiers::compute_mutability(

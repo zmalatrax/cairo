@@ -56,7 +56,7 @@ use crate::diagnostic::{
     UnsupportedOutsideOfFunctionFeatureName,
 };
 use crate::items::enm::SemanticEnumEx;
-use crate::items::imp::{filter_candidate_traits, infer_impl_by_self};
+use crate::items::imp::{filter_candidate_traits, infer_impl_by_self, reduce_trait_type_once};
 use crate::items::modifiers::compute_mutability;
 use crate::items::structure::SemanticStructEx;
 use crate::items::visibility;
@@ -2251,7 +2251,24 @@ fn expr_function_call(
         // Don't add diagnostic if the type is missing (a diagnostic should have already been
         // added).
         // TODO(lior): Add a test to missing type once possible.
-        let expected_ty = ctx.reduce_ty(param_typ);
+        let mut expected_ty = ctx.reduce_ty(param_typ);
+
+        // TODO(yg): this is a temporary workaround: reduce trait item once in impl functions calls.
+        match function_id.lookup(ctx.db).function.generic_function {
+            crate::items::functions::GenericFunctionId::Impl(x) => {
+                // TODO(yg): don't unwrap.
+                let impl_def_id = x.impl_function(ctx.db)?.unwrap().impl_def_id(ctx.db.upcast());
+                expected_ty = reduce_trait_type_once(
+                    ctx.db,
+                    ctx.diagnostics,
+                    expected_ty,
+                    impl_def_id,
+                    &mut ctx.resolver,
+                )?;
+            }
+            _ => {}
+        };
+
         let actual_ty = ctx.reduce_ty(arg_typ);
         if !arg_typ.is_missing(ctx.db)
             && ctx.resolver.inference().conform_ty(actual_ty, expected_ty).is_err()

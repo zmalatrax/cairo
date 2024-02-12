@@ -1492,7 +1492,7 @@ pub fn priv_impl_function_declaration_data(
     let signature_syntax = declaration.signature(syntax_db);
 
     let mut environment = Environment::from_lookup_item_id(db, lookup_item_id, &mut diagnostics);
-    let signature = semantic::Signature::from_ast(
+    let mut signature = semantic::Signature::from_ast(
         &mut diagnostics,
         db,
         &mut resolver,
@@ -1500,6 +1500,25 @@ pub fn priv_impl_function_declaration_data(
         FunctionTitleId::Impl(impl_function_id),
         &mut environment,
     );
+    // TODO(yg): this is a temporary workaround: reduce trait items once in impl functions
+    // signatures.
+    signature.return_type = reduce_trait_type_once(
+        db,
+        &mut diagnostics,
+        signature.return_type,
+        impl_def_id,
+        &mut resolver,
+    )?;
+    for param in &mut signature.params {
+        println!("yg old param type: {:?}", param.ty.debug(db.elongate()));
+        let reduced_type =
+            reduce_trait_type_once(db, &mut diagnostics, param.ty, impl_def_id, &mut resolver)?;
+        println!("yg reduced param type: {:?}", reduced_type.debug(db.elongate()));
+        param.ty = reduced_type;
+    }
+    for param in &mut signature.params {
+        println!("yg after param type: {:?}", param.ty.debug(db.elongate()));
+    }
 
     let trait_function_id = validate_impl_function_signature(
         db,
@@ -1714,8 +1733,8 @@ fn validate_impl_function_signature(
     Ok(trait_function_id)
 }
 
-// TODO(yg): doc, query, cycle handling.
-fn reduce_trait_type_once(
+// TODO(yg): doc, query, cycle handling. move to the appropriate file. Do it inside resolve_type?
+pub fn reduce_trait_type_once(
     db: &dyn SemanticGroup,
     diagnostics: &mut SemanticDiagnostics,
     type_to_reduce: TypeId,

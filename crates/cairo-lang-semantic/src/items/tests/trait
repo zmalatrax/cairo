@@ -4,6 +4,8 @@
 
 //! > TODO(yg): more tests: 0. All combinations of trait type vs. concrete type in impl/trait X {matches, don't match} X {param, return type} 1. type Type2 = Self::Type1. 2. cycle: type Type2 = Self::Type1; type Type1 = Self::Type2; 3. impl type value is concrete with args (Option<u32>).
 
+//! > TODO(yg): make sure it works with type aliases. Add a test for it.
+
 //! > test_runner_name
 test_function_diagnostics(expect_diagnostics: false)
 
@@ -17,14 +19,18 @@ foo
 trait MyTrait {
     type InputType;
     type OutputType;
-    fn foo(x: MyTrait::InputType) -> MyTrait::OutputType;
+    fn foo(x: MyTrait::InputType) -> u32;
 }
 impl MyImpl of MyTrait {
     type InputType = u8;
     type OutputType = u32;
-    fn foo(x: MyTrait::InputType) -> u32 {
+    fn foo(x: MyTrait::InputType) -> MyTrait::OutputType {
         0
     }
+}
+fn main() {
+   let x: u8 = 3;
+   let _y: u32 = MyImpl::foo(x);
 }
 
 //! > expected_diagnostics
