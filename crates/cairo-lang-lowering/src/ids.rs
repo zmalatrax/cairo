@@ -6,7 +6,7 @@ use cairo_lang_syntax::node::ast;
 use cairo_lang_utils::define_short_id;
 use defs::diagnostic_utils::StableLocation;
 use defs::ids::FreeFunctionId;
-use semantic::substitution::{GenericSubstitution, SubstitutionRewriter};
+use semantic::substitution::{GenericSubstitution, GenericSubstitutionRewriter};
 use semantic::{ExprVar, Mutability};
 use smol_str::SmolStr;
 use {cairo_lang_defs as defs, cairo_lang_semantic as semantic};
@@ -175,7 +175,7 @@ impl ConcreteFunctionWithBodyId {
     pub fn signature(&self, db: &dyn LoweringGroup) -> Maybe<Signature> {
         let generic_signature = self.function_with_body_id(db).signature(db)?;
         let substitution = self.substitution(db)?;
-        SubstitutionRewriter { db: db.upcast(), substitution: &substitution }
+        GenericSubstitutionRewriter { db: db.upcast(), substitution: &substitution }
             .rewrite(generic_signature)
     }
     pub fn from_no_generics_free(
@@ -358,7 +358,7 @@ impl Signature {
         }
     }
 }
-semantic::add_rewrite!(<'a>, SubstitutionRewriter<'a>, DiagnosticAdded, Signature);
+semantic::add_rewrite!(<'a>, GenericSubstitutionRewriter<'a>, DiagnosticAdded, Signature);
 
 /// Converts a [semantic::Parameter] to a [semantic::ExprVarMemberPath].
 fn parameter_as_member_path(param: semantic::Parameter) -> semantic::ExprVarMemberPath {

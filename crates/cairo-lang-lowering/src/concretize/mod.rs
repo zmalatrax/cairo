@@ -1,6 +1,6 @@
 use cairo_lang_diagnostics::Maybe;
 use cairo_lang_semantic::substitution::{
-    GenericSubstitution, SemanticRewriter, SubstitutionRewriter,
+    GenericSubstitution, GenericSubstitutionRewriter, SemanticRewriter,
 };
 
 use crate::db::LoweringGroup;
@@ -10,7 +10,7 @@ use crate::{FlatBlockEnd, FlatLowered, MatchArm, Statement};
 /// Rewrites a [FunctionId] with a [SubstitutionRewriter].
 fn concretize_function(
     db: &dyn LoweringGroup,
-    rewriter: &mut SubstitutionRewriter<'_>,
+    rewriter: &mut GenericSubstitutionRewriter<'_>,
     function: FunctionId,
 ) -> Maybe<FunctionId> {
     let long_id = match db.lookup_intern_lowering_function(function) {
@@ -32,7 +32,7 @@ pub fn concretize_lowered(
     lowered: &mut FlatLowered,
     substitution: &GenericSubstitution,
 ) -> Maybe<()> {
-    let mut rewriter = SubstitutionRewriter { db: db.upcast(), substitution };
+    let mut rewriter = GenericSubstitutionRewriter { db: db.upcast(), substitution };
     // Substitute all types.
     for (_, var) in lowered.variables.iter_mut() {
         var.ty = rewriter.rewrite(var.ty)?;

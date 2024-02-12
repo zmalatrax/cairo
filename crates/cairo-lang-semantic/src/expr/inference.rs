@@ -34,7 +34,7 @@ use crate::items::generics::{GenericParamConst, GenericParamImpl, GenericParamTy
 use crate::items::imp::{ImplId, ImplLookupContext, UninferredImpl};
 use crate::items::trt::{ConcreteTraitGenericFunctionId, ConcreteTraitGenericFunctionLongId};
 use crate::literals::LiteralId;
-use crate::substitution::{HasDb, SemanticRewriter, SubstitutionRewriter};
+use crate::substitution::{GenericSubstitutionRewriter, HasDb, SemanticRewriter};
 use crate::types::{ConcreteEnumLongId, ConcreteExternTypeLongId, ConcreteStructLongId};
 use crate::{
     add_basic_rewrites, add_expr_rewrites, add_rewrite, semantic_object_for_id, ConcreteEnumId,
@@ -637,7 +637,7 @@ impl<'db> Inference<'db> {
             return Ok(SolutionSet::Unique(canonical_impl));
         };
         let concrete_impl = self.rewrite(concrete_impl).no_err();
-        let mut rewriter = SubstitutionRewriter {
+        let mut rewriter = GenericSubstitutionRewriter {
             db: self.db,
             substitution: &concrete_impl.substitution(self.db)?,
         };

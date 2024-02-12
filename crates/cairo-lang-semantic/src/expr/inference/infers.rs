@@ -9,7 +9,7 @@ use super::{Inference, InferenceError, InferenceResult};
 use crate::items::functions::{GenericFunctionId, ImplGenericFunctionId};
 use crate::items::imp::{ImplId, ImplLookupContext, UninferredImpl};
 use crate::items::trt::ConcreteTraitGenericFunctionId;
-use crate::substitution::{GenericSubstitution, SemanticRewriter, SubstitutionRewriter};
+use crate::substitution::{GenericSubstitution, GenericSubstitutionRewriter, SemanticRewriter};
 use crate::{
     ConcreteFunction, ConcreteImplLongId, ConcreteTraitId, ConcreteTraitLongId, FunctionId,
     FunctionLongId, GenericArgumentId, GenericParam, TypeId,
@@ -176,7 +176,7 @@ impl<'db> InferenceEmbeddings for Inference<'db> {
             stable_ptr,
         )?;
 
-        Ok(SubstitutionRewriter {
+        Ok(GenericSubstitutionRewriter {
             db: self.db,
             substitution: &GenericSubstitution::new(&impl_alias_generic_params, &generic_args),
         }
@@ -197,7 +197,7 @@ impl<'db> InferenceEmbeddings for Inference<'db> {
         let new_generic_args =
             self.infer_generic_args(generic_params, lookup_context, stable_ptr)?;
         let substitution = GenericSubstitution::new(generic_params, &new_generic_args);
-        let mut rewriter = SubstitutionRewriter { db: self.db, substitution: &substitution };
+        let mut rewriter = GenericSubstitutionRewriter { db: self.db, substitution: &substitution };
         let generic_args = rewriter.rewrite(generic_args.iter().copied().collect_vec())?;
         self.conform_generic_args(&generic_args, expected_generic_args)?;
         Ok(self.rewrite(new_generic_args).no_err())
@@ -213,9 +213,10 @@ impl<'db> InferenceEmbeddings for Inference<'db> {
         let mut generic_args = vec![];
         let mut substitution = GenericSubstitution::default();
         for generic_param in generic_params {
-            let generic_param = SubstitutionRewriter { db: self.db, substitution: &substitution }
-                .rewrite(*generic_param)
-                .map_err(InferenceError::Failed)?;
+            let generic_param =
+                GenericSubstitutionRewriter { db: self.db, substitution: &substitution }
+                    .rewrite(*generic_param)
+                    .map_err(InferenceError::Failed)?;
             let generic_arg =
                 self.infer_generic_arg(&generic_param, lookup_context.clone(), stable_ptr)?;
             generic_args.push(generic_arg);
@@ -252,7 +253,7 @@ impl<'db> InferenceEmbeddings for Inference<'db> {
                 }
             };
         let substitution = GenericSubstitution::new(&generic_params, &generic_args);
-        let mut rewriter = SubstitutionRewriter { db: self.db, substitution: &substitution };
+        let mut rewriter = GenericSubstitutionRewriter { db: self.db, substitution: &substitution };
 
         let fixed_param_ty = rewriter.rewrite(first_param.ty).ok()?;
         let (_, n_snapshots) = match self.conform_ty_ex(self_ty, fixed_param_ty, true) {

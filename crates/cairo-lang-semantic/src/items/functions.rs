@@ -5,7 +5,8 @@ use cairo_lang_debug::DebugWithDb;
 use cairo_lang_defs::diagnostic_utils::StableLocation;
 use cairo_lang_defs::ids::{
     ExternFunctionId, FreeFunctionId, FunctionTitleId, FunctionWithBodyId, ImplFunctionId,
-    LanguageElementId, ModuleItemId, ParamLongId, TopLevelLanguageElementId, TraitFunctionId,
+    ImplTypeId, LanguageElementId, ModuleItemId, ParamLongId, TopLevelLanguageElementId,
+    TraitFunctionId, TraitTypeId,
 };
 use cairo_lang_diagnostics::{skip_diagnostic, Diagnostics, Maybe};
 use cairo_lang_filesystem::ids::UnstableSalsaId;
@@ -27,12 +28,31 @@ use crate::db::SemanticGroup;
 use crate::diagnostic::{SemanticDiagnosticKind, SemanticDiagnostics};
 use crate::expr::compute::Environment;
 use crate::resolve::{Resolver, ResolverData};
-use crate::substitution::{GenericSubstitution, SemanticRewriter, SubstitutionRewriter};
+use crate::substitution::{GenericSubstitution, GenericSubstitutionRewriter, SemanticRewriter};
 use crate::types::resolve_type;
 use crate::{
     semantic, semantic_object_for_id, ConcreteImplId, ConcreteImplLongId, GenericArgumentId,
     GenericParam, SemanticDiagnostic, TypeId,
 };
+
+// TODO(yg): move, this file is for functions.
+/// An impl type.
+#[derive(Copy, Clone, Debug, Hash, PartialEq, Eq, SemanticObject)]
+pub struct ImplType {
+    pub impl_id: ImplId,
+    pub trait_type: TraitTypeId,
+    pub value: TypeId,
+}
+impl ImplType {
+    pub fn impl_type(&self, db: &dyn SemanticGroup) -> Maybe<Option<ImplTypeId>> {
+        match self.impl_id {
+            ImplId::Concrete(concrete_impl_id) => {
+                concrete_impl_id.get_impl_type(db, self.trait_type)
+            }
+            ImplId::GenericParameter(_) | ImplId::ImplVar(_) => Ok(None),
+        }
+    }
+}
 
 /// A generic function of an impl.
 #[derive(Copy, Clone, Debug, Hash, PartialEq, Eq, SemanticObject)]
@@ -690,7 +710,7 @@ pub fn concrete_function_signature(
     //   one by one, not together.
     // Panic shouldn't occur since ConcreteFunction is assumed to be constructed correctly.
     let substitution = GenericSubstitution::new(&generic_params, &generic_args);
-    SubstitutionRewriter { db, substitution: &substitution }.rewrite(generic_signature)
+    GenericSubstitutionRewriter { db, substitution: &substitution }.rewrite(generic_signature)
 }
 
 /// For a given list of AST parameters, returns the list of semantic parameters along with the

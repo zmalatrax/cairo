@@ -19,7 +19,7 @@ use crate::diagnostic::SemanticDiagnostics;
 use crate::expr::inference::canonic::ResultNoErrEx;
 use crate::expr::inference::InferenceId;
 use crate::resolve::{Resolver, ResolverData};
-use crate::substitution::{GenericSubstitution, SemanticRewriter, SubstitutionRewriter};
+use crate::substitution::{GenericSubstitution, GenericSubstitutionRewriter, SemanticRewriter};
 use crate::types::{resolve_type, ConcreteStructId};
 use crate::{semantic, GenericParam, SemanticDiagnostic};
 
@@ -261,8 +261,8 @@ pub trait SemanticStructEx<'a>: Upcast<dyn SemanticGroup + 'a> {
         generic_members
             .into_iter()
             .map(|(name, member)| {
-                let ty =
-                    SubstitutionRewriter { db, substitution: &substitution }.rewrite(member.ty)?;
+                let ty = GenericSubstitutionRewriter { db, substitution: &substitution }
+                    .rewrite(member.ty)?;
                 let member = semantic::Member { ty, ..member };
                 Ok((name, member))
             })

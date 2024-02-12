@@ -2778,3 +2778,15 @@ fn trailing_trivia_width(db: &dyn SyntaxGroup, green_id: GreenId) -> Option<Text
         }
     }
 }
+
+trait MyTrait {
+    type OutputType;
+    fn my_method(&self) -> u32;
+}
+struct MyStruct;
+impl MyTrait for MyStruct {
+    type OutputType = u32;
+    fn my_method(&self) -> Self::OutputType {
+        42
+    }
+}

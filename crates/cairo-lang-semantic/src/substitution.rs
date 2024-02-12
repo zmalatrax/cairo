@@ -17,7 +17,7 @@ use crate::expr::inference::{
 };
 use crate::items::functions::{
     ConcreteFunctionWithBody, ConcreteFunctionWithBodyId, GenericFunctionId,
-    GenericFunctionWithBodyId, ImplGenericFunctionId, ImplGenericFunctionWithBodyId,
+    GenericFunctionWithBodyId, ImplGenericFunctionId, ImplGenericFunctionWithBodyId, ImplType,
 };
 use crate::items::generics::{GenericParamConst, GenericParamImpl, GenericParamType};
 use crate::items::imp::{ImplId, UninferredImpl};
@@ -57,6 +57,32 @@ impl Deref for GenericSubstitution {
 }
 #[allow(clippy::derived_hash_with_manual_eq)]
 impl std::hash::Hash for GenericSubstitution {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.0.iter().collect_vec().hash(state);
+    }
+}
+
+/// A substitution of impl types in trait types.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+// TODO(yg): add ImplType in semantic, with the value. (and pointing to the def(ImplTypeId)? Maybe
+// ImplTypeId should be renamed to ImplTypeDefId.
+pub struct TraitTypeSubstitution(pub OrderedHashMap<TraitTypeId, ImplType>);
+impl TraitTypeSubstitution {
+    pub fn new(trait_types: &[TraitTypeId], impl_types: &[ImplType]) -> Self {
+        TraitTypeSubstitution(
+            zip_eq(trait_types.iter().copied(), impl_types.iter().copied()).collect(),
+        )
+    }
+}
+impl Deref for TraitTypeSubstitution {
+    type Target = OrderedHashMap<TraitTypeId, ImplType>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+#[allow(clippy::derived_hash_with_manual_eq)]
+impl std::hash::Hash for TraitTypeSubstitution {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.0.iter().collect_vec().hash(state);
     }
@@ -309,29 +335,28 @@ macro_rules! add_expr_rewrites {
     };
 }
 
-pub struct SubstitutionRewriter<'a> {
+pub struct GenericSubstitutionRewriter<'a> {
     pub db: &'a dyn SemanticGroup,
     pub substitution: &'a GenericSubstitution,
 }
-impl<'a> HasDb<&'a dyn SemanticGroup> for SubstitutionRewriter<'a> {
+impl<'a> HasDb<&'a dyn SemanticGroup> for GenericSubstitutionRewriter<'a> {
     fn get_db(&self) -> &'a dyn SemanticGroup {
         self.db
     }
 }
-add_basic_rewrites!(<'a>, SubstitutionRewriter<'a>, DiagnosticAdded, @exclude TypeLongId ImplId);
-impl<'a> SemanticRewriter<TypeLongId, DiagnosticAdded> for SubstitutionRewriter<'a> {
+add_basic_rewrites!(<'a>, GenericSubstitutionRewriter<'a>, DiagnosticAdded, @exclude TypeLongId ImplId);
+impl<'a> SemanticRewriter<TypeLongId, DiagnosticAdded> for GenericSubstitutionRewriter<'a> {
     fn rewrite(&mut self, value: TypeLongId) -> Maybe<TypeLongId> {
         if let TypeLongId::GenericParameter(generic_param) = value {
             if let Some(generic_arg) = self.substitution.get(&generic_param) {
                 let type_id = *extract_matches!(generic_arg, GenericArgumentId::Type);
-                // return self.rewrite(self.db.lookup_intern_type(type_id));
                 return Ok(self.db.lookup_intern_type(type_id));
             }
         }
         value.default_rewrite(self)
     }
 }
-impl<'a> SemanticRewriter<ImplId, DiagnosticAdded> for SubstitutionRewriter<'a> {
+impl<'a> SemanticRewriter<ImplId, DiagnosticAdded> for GenericSubstitutionRewriter<'a> {
     fn rewrite(&mut self, value: ImplId) -> Maybe<ImplId> {
         if let ImplId::GenericParameter(generic_param) = value {
             if let Some(generic_arg) = self.substitution.get(&generic_param) {
@@ -344,3 +369,40 @@ impl<'a> SemanticRewriter<ImplId, DiagnosticAdded> for SubstitutionRewriter<'a> 
         value.default_rewrite(self)
     }
 }
+
+// TODO(yg): remove.
+// pub struct TraitTypeSubstitutionRewriter<'a> {
+//     pub db: &'a dyn SemanticGroup,
+//     pub substitution: &'a TraitTypeSubstitution,
+// }
+// impl<'a> HasDb<&'a dyn SemanticGroup> for TraitTypeSubstitutionRewriter<'a> {
+//     fn get_db(&self) -> &'a dyn SemanticGroup {
+//         self.db
+//     }
+// }
+// add_basic_rewrites!(<'a>, TraitTypeSubstitutionRewriter<'a>, DiagnosticAdded, @exclude TypeLongId
+// ImplId); impl<'a> SemanticRewriter<TypeLongId, DiagnosticAdded> for
+// TraitTypeSubstitutionRewriter<'a> {     fn rewrite(&mut self, value: TypeLongId) ->
+// Maybe<TypeLongId> {         if let TypeLongId::TraitType(trait_type_id) = value {
+//             if let Some(impl_type) = self.substitution.get(&trait_type_id) {
+//                 // TODO(yg): inline.
+//                 let type_id = impl_type.impl_type(self.db)?;
+//                 return Ok(self.db.lookup_intern_type(type_id));
+//             }
+//         }
+//         value.default_rewrite(self)
+//     }
+// }
+// impl<'a> SemanticRewriter<ImplId, DiagnosticAdded> for TraitTypeSubstitutionRewriter<'a> {
+//     fn rewrite(&mut self, value: ImplId) -> Maybe<ImplId> {
+//         if let ImplId::GenericParameter(generic_param) = value {
+//             if let Some(generic_arg) = self.substitution.get(&generic_param) {
+//                 let impl_id = *extract_matches!(generic_arg, GenericArgumentId::Impl);
+//                 // TODO(GIL): Reduce and check for cycles when the substitution is created.
+//                 // Substitution is guaranteed to not contain its own variables.
+//                 return Ok(impl_id);
+//             }
+//         }
+//         value.default_rewrite(self)
+//     }
+// }

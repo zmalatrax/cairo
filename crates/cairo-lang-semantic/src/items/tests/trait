@@ -1,6 +1,8 @@
 //! > Test type items in trait/impl. phase0.
 
-//! > TODO(yg): 1. make this work. 2. change in impl to MyImpl::InputType. 3. change in both to Self. All in separate tests. 4. Also add tests with refering to it as test::MyTrait and super::MyTrait.
+//! > TODO(yg): 1. make this work. 2. change in impl to MyImpl::InputType. 3. change in both to Self. All in separate tests. 4. Also add tests with referring to it as test::MyTrait and super::MyTrait.
+
+//! > TODO(yg): more tests: 0. All combinations of trait type vs. concrete type in impl/trait X {matches, don't match} X {param, return type} 1. type Type2 = Self::Type1. 2. cycle: type Type2 = Self::Type1; type Type1 = Self::Type2; 3. impl type value is concrete with args (Option<u32>).
 
 //! > test_runner_name
 test_function_diagnostics(expect_diagnostics: false)
@@ -20,7 +22,7 @@ trait MyTrait {
 impl MyImpl of MyTrait {
     type InputType = u8;
     type OutputType = u32;
-    fn foo(x: u8) -> u32 {
+    fn foo(x: MyTrait::InputType) -> u32 {
         0
     }
 }

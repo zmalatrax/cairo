@@ -37,7 +37,7 @@ use crate::items::module::ModuleItemInfo;
 use crate::items::trt::{ConcreteTraitGenericFunctionLongId, ConcreteTraitId, ConcreteTraitLongId};
 use crate::items::visibility;
 use crate::literals::LiteralLongId;
-use crate::substitution::{GenericSubstitution, SemanticRewriter, SubstitutionRewriter};
+use crate::substitution::{GenericSubstitution, GenericSubstitutionRewriter, SemanticRewriter};
 use crate::types::resolve_type;
 use crate::{
     ConcreteFunction, ConcreteTypeId, FunctionId, FunctionLongId, GenericArgumentId, GenericParam,
@@ -665,7 +665,7 @@ impl<'db> Resolver<'db> {
                     identifier.stable_ptr().untyped(),
                 )?;
                 let substitution = GenericSubstitution::new(&generic_params, &generic_args);
-                let ty = SubstitutionRewriter { db: self.db, substitution: &substitution }
+                let ty = GenericSubstitutionRewriter { db: self.db, substitution: &substitution }
                     .rewrite(ty)?;
                 ResolvedConcreteItem::Type(ty)
             }
@@ -683,8 +683,9 @@ impl<'db> Resolver<'db> {
                     identifier.stable_ptr().untyped(),
                 )?;
                 let substitution = GenericSubstitution::new(&generic_params, &generic_args);
-                let impl_id = SubstitutionRewriter { db: self.db, substitution: &substitution }
-                    .rewrite(impl_id)?;
+                let impl_id =
+                    GenericSubstitutionRewriter { db: self.db, substitution: &substitution }
+                        .rewrite(impl_id)?;
                 ResolvedConcreteItem::Impl(impl_id)
             }
             ResolvedGenericItem::Trait(trait_id) => {
@@ -975,8 +976,9 @@ impl<'db> Resolver<'db> {
         }
 
         for generic_param in generic_params.iter() {
-            let generic_param = SubstitutionRewriter { db: self.db, substitution: &substitution }
-                .rewrite(*generic_param)?;
+            let generic_param =
+                GenericSubstitutionRewriter { db: self.db, substitution: &substitution }
+                    .rewrite(*generic_param)?;
             let generic_arg = self.resolve_generic_arg(
                 generic_param,
                 arg_syntax_for_param

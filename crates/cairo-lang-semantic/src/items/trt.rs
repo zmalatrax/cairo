@@ -29,7 +29,7 @@ use crate::expr::compute::{compute_root_expr, ComputationContext, Environment};
 use crate::expr::inference::canonic::ResultNoErrEx;
 use crate::expr::inference::InferenceId;
 use crate::resolve::{Resolver, ResolverData};
-use crate::substitution::{GenericSubstitution, SemanticRewriter, SubstitutionRewriter};
+use crate::substitution::{GenericSubstitution, GenericSubstitutionRewriter, SemanticRewriter};
 use crate::{
     semantic, semantic_object_for_id, FunctionBody, GenericArgumentId, GenericParam, Mutability,
     SemanticDiagnostic, TypeId,
@@ -784,7 +784,7 @@ pub fn concrete_trait_function_generic_params(
     );
     let generic_params =
         db.trait_function_generic_params(concrete_trait_function_id.function_id(db))?;
-    let mut rewriter = SubstitutionRewriter { db, substitution: &substitution };
+    let mut rewriter = GenericSubstitutionRewriter { db, substitution: &substitution };
     rewriter.rewrite(generic_params)
 }
 
@@ -800,7 +800,7 @@ pub fn concrete_trait_function_signature(
     );
     let generic_signature =
         db.trait_function_signature(concrete_trait_function_id.function_id(db))?;
-    SubstitutionRewriter { db, substitution: &substitution }.rewrite(generic_signature)
+    GenericSubstitutionRewriter { db, substitution: &substitution }.rewrite(generic_signature)
 }
 
 // === Body ===

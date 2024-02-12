@@ -53,7 +53,8 @@ use crate::items::function_with_body::get_implicit_precedence;
 use crate::items::functions::ImplicitPrecedence;
 use crate::items::us::SemanticUseEx;
 use crate::resolve::{ResolvedConcreteItem, ResolvedGenericItem, Resolver, ResolverData};
-use crate::substitution::{GenericSubstitution, SemanticRewriter, SubstitutionRewriter};
+use crate::substitution::{GenericSubstitution, GenericSubstitutionRewriter, SemanticRewriter};
+use crate::types::resolve_type;
 use crate::{
     semantic, semantic_object_for_id, ConcreteFunction, ConcreteTraitId, ConcreteTraitLongId,
     FunctionId, FunctionLongId, GenericArgumentId, GenericParam, Mutability, SemanticDiagnostic,
@@ -99,6 +100,13 @@ impl DebugWithDb<dyn SemanticGroup> for ConcreteImplLongId {
 impl ConcreteImplId {
     pub fn impl_def_id(&self, db: &dyn SemanticGroup) -> ImplDefId {
         db.lookup_intern_concrete_impl(*self).impl_def_id
+    }
+    pub fn get_impl_type(
+        &self,
+        db: &dyn SemanticGroup,
+        ty: TraitTypeId,
+    ) -> Maybe<Option<ImplTypeId>> {
+        db.impl_type_by_trait_type(self.impl_def_id(db), ty)
     }
     pub fn get_impl_function(
         &self,
@@ -331,7 +339,8 @@ pub fn impl_concrete_trait(db: &dyn SemanticGroup, impl_id: ImplId) -> Maybe<Con
             );
 
             let impl_concrete_trait_id = db.impl_def_concrete_trait(long_impl.impl_def_id)?;
-            SubstitutionRewriter { db, substitution: &substitution }.rewrite(impl_concrete_trait_id)
+            GenericSubstitutionRewriter { db, substitution: &substitution }
+                .rewrite(impl_concrete_trait_id)
         }
         ImplId::GenericParameter(param) => {
             let param_impl =
@@ -1500,6 +1509,7 @@ pub fn priv_impl_function_declaration_data(
         &signature,
         function_syntax,
         &generic_params,
+        &mut resolver,
     );
 
     let attributes = function_syntax.attributes(syntax_db).structurize(syntax_db);
@@ -1543,6 +1553,7 @@ fn validate_impl_function_signature(
     signature: &semantic::Signature,
     impl_function_syntax: &ast::FunctionWithBody,
     impl_func_generics: &[GenericParam],
+    resolver: &mut Resolver<'_>,
 ) -> Maybe<TraitFunctionId> {
     let syntax_db = db.upcast();
     let defs_db = db.upcast();
@@ -1589,7 +1600,7 @@ fn validate_impl_function_signature(
             })
             .collect_vec(),
     );
-    let concrete_trait_signature = SubstitutionRewriter { db, substitution: &substitution }
+    let concrete_trait_signature = GenericSubstitutionRewriter { db, substitution: &substitution }
         .rewrite(concrete_trait_signature)?;
 
     if signature.params.len() != concrete_trait_signature.params.len() {
@@ -1607,17 +1618,15 @@ fn validate_impl_function_signature(
     for (idx, (param, trait_param)) in
         izip!(signature.params.iter(), concrete_trait_signature.params.iter()).enumerate()
     {
-        let expected_ty = trait_param.ty;
-        if matches!(db.lookup_intern_type(expected_ty), TypeLongId::TraitType(_)) {}
-        println!("yg type in trait function: {:?}", expected_ty.debug(db.elongate()));
-        let actual_ty = param.ty;
-        println!("yg type in impl function: {:?}", actual_ty.debug(db.elongate()));
-
-        // TODO(yg): this is a workaround to see if there are more issues. This should be checked
-        // well.
-        if expected_ty != actual_ty
-            && !matches!(db.lookup_intern_type(expected_ty), TypeLongId::TraitType(_))
-        {
+        // TODO(yg): this reduces the trait type once. This relies on the fact that only concrete
+        // types are allowed in impl types, but it doesn't enforce it. To support trait types in the
+        // impl type value, reduce multiple times, but avoid cycles. This should be done by a query
+        // with cycle handling. This should anyway be a query to cache the results.
+        // TODO(yg): use as query: db.reduce_trait_type_once(...)
+        let expected_ty =
+            reduce_trait_type_once(db, diagnostics, trait_param.ty, impl_def_id, resolver)?;
+        let actual_ty = reduce_trait_type_once(db, diagnostics, param.ty, impl_def_id, resolver)?;
+        if expected_ty != actual_ty {
             println!("yg no match!");
             diagnostics.report(
                 &signature_syntax.parameters(syntax_db).elements(syntax_db)[idx]
@@ -1670,9 +1679,15 @@ fn validate_impl_function_signature(
         diagnostics.report(signature_syntax, PassPanicAsNopanic { impl_function_id, trait_id });
     }
 
-    let expected_ty = concrete_trait_signature.return_type;
-    let actual_ty = signature.return_type;
-    // TODO(yg): same as above - workaround.
+    let expected_ty = reduce_trait_type_once(
+        db,
+        diagnostics,
+        concrete_trait_signature.return_type,
+        impl_def_id,
+        resolver,
+    )?;
+    let actual_ty =
+        reduce_trait_type_once(db, diagnostics, signature.return_type, impl_def_id, resolver)?;
     if expected_ty != actual_ty
         && !matches!(db.lookup_intern_type(expected_ty), TypeLongId::TraitType(_))
     {
@@ -1697,6 +1712,29 @@ fn validate_impl_function_signature(
         );
     }
     Ok(trait_function_id)
+}
+
+// TODO(yg): doc, query, cycle handling.
+fn reduce_trait_type_once(
+    db: &dyn SemanticGroup,
+    diagnostics: &mut SemanticDiagnostics,
+    type_to_reduce: TypeId,
+    impl_def_id: ImplDefId,
+    resolver: &mut Resolver<'_>,
+) -> Maybe<TypeId> {
+    let impl_def_data = db.priv_impl_definition_data(impl_def_id)?;
+    Ok(if let TypeLongId::TraitType(trait_type) = db.lookup_intern_type(type_to_reduce) {
+        // TODO(yg): don't unwrap.
+        let impl_type_id = db.impl_type_by_trait_type(impl_def_id, trait_type)?.unwrap();
+        // TODO(yg): Can we assume it's always there? If not, handle the case it's not. It's not
+        // exactly like `function_syntax` in `priv_impl_function_declaration_data` as there the
+        // impl was found from the impl_function_id...
+        let type_value_expr = impl_def_data.item_type_asts[&impl_type_id].ty(db.upcast());
+        let resolved_type = resolve_type(db, diagnostics, resolver, &type_value_expr);
+        resolved_type
+    } else {
+        type_to_reduce
+    })
 }
 
 // === Impl Function Body ===
