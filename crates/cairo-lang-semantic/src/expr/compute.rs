@@ -2112,7 +2112,7 @@ fn member_access_expr(
             // TODO(spapini): Handle snapshot members.
             Err(ctx.diagnostics.report(&rhs_syntax, Unsupported))
         }
-        TypeLongId::GenericParameter(_) => {
+        TypeLongId::GenericParameter(_) | TypeLongId::TraitType(_) => {
             Err(ctx.diagnostics.report(&rhs_syntax, TypeHasNoMembers { ty, member_name }))
         }
         TypeLongId::Var(_) => Err(ctx

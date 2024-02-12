@@ -754,7 +754,7 @@ fn get_inner_types(db: &dyn SemanticGroup, ty: TypeId) -> Maybe<Vec<TypeId>> {
         }
         TypeLongId::Tuple(tys) => tys,
         TypeLongId::Snapshot(_) => vec![],
-        TypeLongId::GenericParameter(_) => {
+        TypeLongId::GenericParameter(_) | TypeLongId::TraitType(_) => {
             return Err(skip_diagnostic());
         }
         TypeLongId::Var(_) => panic!("Types should be fully resolved at this point."),
@@ -1608,9 +1608,17 @@ fn validate_impl_function_signature(
         izip!(signature.params.iter(), concrete_trait_signature.params.iter()).enumerate()
     {
         let expected_ty = trait_param.ty;
+        if matches!(db.lookup_intern_type(expected_ty), TypeLongId::TraitType(_)) {}
+        println!("yg type in trait function: {:?}", expected_ty.debug(db.elongate()));
         let actual_ty = param.ty;
+        println!("yg type in impl function: {:?}", actual_ty.debug(db.elongate()));
 
-        if expected_ty != actual_ty {
+        // TODO(yg): this is a workaround to see if there are more issues. This should be checked
+        // well.
+        if expected_ty != actual_ty
+            && !matches!(db.lookup_intern_type(expected_ty), TypeLongId::TraitType(_))
+        {
+            println!("yg no match!");
             diagnostics.report(
                 &signature_syntax.parameters(syntax_db).elements(syntax_db)[idx]
                     .type_clause(syntax_db)
@@ -1623,6 +1631,8 @@ fn validate_impl_function_signature(
                     actual_ty,
                 },
             );
+        } else {
+            println!("yg match!");
         }
 
         if trait_param.mutability != param.mutability {
@@ -1662,7 +1672,10 @@ fn validate_impl_function_signature(
 
     let expected_ty = concrete_trait_signature.return_type;
     let actual_ty = signature.return_type;
-    if expected_ty != actual_ty {
+    // TODO(yg): same as above - workaround.
+    if expected_ty != actual_ty
+        && !matches!(db.lookup_intern_type(expected_ty), TypeLongId::TraitType(_))
+    {
         let location_ptr = match signature_syntax.ret_ty(syntax_db) {
             OptionReturnTypeClause::ReturnTypeClause(ret_ty) => {
                 ret_ty.ty(syntax_db).as_syntax_node()

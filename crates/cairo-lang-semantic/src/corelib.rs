@@ -338,10 +338,9 @@ pub fn unwrap_error_propagation_type(
                 None
             }
         }
-        TypeLongId::GenericParameter(_) => todo!(
-            "When generic types are supported, if type is of matching type, allow unwrapping it \
-             to type."
-        ),
+        // TODO(yuval): Add tests for these 2, and change panics to diagnostics.
+        TypeLongId::GenericParameter(_) => panic!("Generic types can't be unwrapped."),
+        TypeLongId::TraitType(_) => panic!("Trait types can't be unwrapped."),
         TypeLongId::Concrete(
             semantic::ConcreteTypeId::Struct(_) | semantic::ConcreteTypeId::Extern(_),
         )

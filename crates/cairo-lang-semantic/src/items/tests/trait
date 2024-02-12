@@ -26,22 +26,3 @@ impl MyImpl of MyTrait {
 }
 
 //! > expected_diagnostics
-error: Invalid path.
- --> lib.cairo:4:47
-    fn foo(x: MyTrait::InputType) -> MyTrait::OutputType;
-                                              ^********^
-
-error: Invalid path.
- --> lib.cairo:4:24
-    fn foo(x: MyTrait::InputType) -> MyTrait::OutputType;
-                       ^*******^
-
-error: Parameter type of impl function `MyImpl::foo` is incompatible with `MyTrait::foo`. Expected: `<missing>`, actual: `core::integer::u8`.
- --> lib.cairo:9:15
-    fn foo(x: u8) -> u32 {
-              ^^
-
-error: Return type of impl function `MyImpl::foo` is incompatible with `MyTrait::foo`. Expected: `<missing>`, actual: `core::integer::u32`.
- --> lib.cairo:9:22
-    fn foo(x: u8) -> u32 {
-                     ^*^

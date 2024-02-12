@@ -1,5 +1,7 @@
 use cairo_lang_debug::DebugWithDb;
-use cairo_lang_defs::ids::{EnumId, ExternTypeId, GenericParamId, GenericTypeId, StructId};
+use cairo_lang_defs::ids::{
+    EnumId, ExternTypeId, GenericParamId, GenericTypeId, StructId, TraitTypeId,
+};
 use cairo_lang_diagnostics::{DiagnosticAdded, Maybe};
 use cairo_lang_proc_macros::SemanticObject;
 use cairo_lang_syntax::attribute::consts::{MUST_USE_ATTR, UNSTABLE_ATTR};
@@ -34,6 +36,7 @@ pub enum TypeLongId {
     GenericParameter(GenericParamId),
     // TODO(yg): add a variant here for trait type, and do similar to generic type as in
     // determine_base_item_in_local_scope.
+    TraitType(TraitTypeId),
     Var(TypeVar),
     Missing(#[dont_rewrite] DiagnosticAdded),
 }
@@ -78,13 +81,14 @@ impl TypeId {
         db.lookup_intern_type(*self).head(db)
     }
 
-    /// Returns true if the type does not depend on any generics.
+    /// Returns true if the type does not depend on any generics/trait types.
     pub fn is_fully_concrete(&self, db: &dyn SemanticGroup) -> bool {
         match db.lookup_intern_type(*self) {
             TypeLongId::Concrete(concrete_type_id) => concrete_type_id.is_fully_concrete(db),
             TypeLongId::Tuple(types) => types.iter().all(|ty| ty.is_fully_concrete(db)),
             TypeLongId::Snapshot(ty) => ty.is_fully_concrete(db),
             TypeLongId::GenericParameter(_) => false,
+            TypeLongId::TraitType(_) => false,
             TypeLongId::Var(_) => false,
             TypeLongId::Missing(_) => false,
         }
@@ -105,6 +109,7 @@ impl TypeLongId {
             TypeLongId::GenericParameter(generic_param) => {
                 format!("{}", generic_param.name(db.upcast()).unwrap_or_else(|| "_".into()))
             }
+            TypeLongId::TraitType(trait_type_id) => trait_type_id.name(db.upcast()).into(),
             TypeLongId::Var(var) => format!("?{}", var.id.0),
             TypeLongId::Missing(_) => "<missing>".to_string(),
         }
@@ -116,7 +121,10 @@ impl TypeLongId {
             TypeLongId::Concrete(concrete) => TypeHead::Concrete(concrete.generic_type(db)),
             TypeLongId::Tuple(_) => TypeHead::Tuple,
             TypeLongId::Snapshot(inner) => TypeHead::Snapshot(Box::new(inner.head(db)?)),
-            TypeLongId::GenericParameter(_) | TypeLongId::Var(_) | TypeLongId::Missing(_) => {
+            TypeLongId::GenericParameter(_)
+            | TypeLongId::TraitType(_)
+            | TypeLongId::Var(_)
+            | TypeLongId::Missing(_) => {
                 return None;
             }
         })
@@ -452,6 +460,7 @@ pub fn single_value_type(db: &dyn SemanticGroup, ty: TypeId) -> Maybe<bool> {
         }
         semantic::TypeLongId::Snapshot(ty) => db.single_value_type(ty)?,
         semantic::TypeLongId::GenericParameter(_) => false,
+        semantic::TypeLongId::TraitType(_) => false,
         semantic::TypeLongId::Var(_) => false,
         semantic::TypeLongId::Missing(_) => false,
     })

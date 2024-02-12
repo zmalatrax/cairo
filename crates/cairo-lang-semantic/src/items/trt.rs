@@ -313,6 +313,21 @@ pub fn trait_item_names(
     Ok(chain!(trait_functions.keys(), trait_types.keys()).cloned().collect())
 }
 
+/// Query implementation of [crate::db::SemanticGroup::trait_item_by_name].
+pub fn trait_item_by_name(
+    db: &dyn SemanticGroup,
+    trait_id: TraitId,
+    name: SmolStr,
+) -> Maybe<Option<TraitItemId>> {
+    if let Some(trait_function_id) = db.trait_function_by_name(trait_id, name.clone())? {
+        return Ok(Some(TraitItemId::Function(trait_function_id)));
+    };
+    if let Some(trait_type_id) = db.trait_type_by_name(trait_id, name)? {
+        return Ok(Some(TraitItemId::Type(trait_type_id)));
+    };
+    Ok(None)
+}
+
 /// Query implementation of [crate::db::SemanticGroup::trait_functions].
 pub fn trait_functions(
     db: &dyn SemanticGroup,

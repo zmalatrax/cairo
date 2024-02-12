@@ -547,39 +547,50 @@ impl<'db> Resolver<'db> {
                 }
             }
             ResolvedConcreteItem::Trait(concrete_trait_id) => {
-                // Find the relevant function in the trait.
-                let long_trait_id = self.db.lookup_intern_concrete_trait(*concrete_trait_id);
-                let trait_id = long_trait_id.trait_id;
-                let Some(trait_function_id) = self.db.trait_function_by_name(trait_id, ident)?
-                else {
+                // Find the relevant item in the trait.
+                let concrete_trait_long_id =
+                    self.db.lookup_intern_concrete_trait(*concrete_trait_id);
+                let trait_id = concrete_trait_long_id.trait_id;
+                let Some(trait_item_id) = self.db.trait_item_by_name(trait_id, ident)? else {
                     return Err(diagnostics.report(identifier, InvalidPath));
                 };
 
-                let concrete_trait_function = self.db.intern_concrete_trait_function(
-                    ConcreteTraitGenericFunctionLongId::new(
-                        self.db,
-                        *concrete_trait_id,
-                        trait_function_id,
-                    ),
-                );
-                let impl_lookup_context = self.impl_lookup_context();
-                let generic_function = self
-                    .data
-                    .inference_data
-                    .inference(self.db)
-                    .infer_trait_generic_function(
-                        concrete_trait_function,
-                        &impl_lookup_context,
-                        Some(identifier.stable_ptr().untyped()),
-                    )
-                    .map_err(|err| err.report(diagnostics, identifier.stable_ptr().untyped()))?;
+                match trait_item_id {
+                    cairo_lang_defs::ids::TraitItemId::Function(trait_function_id) => {
+                        let concrete_trait_function = self.db.intern_concrete_trait_function(
+                            ConcreteTraitGenericFunctionLongId::new(
+                                self.db,
+                                *concrete_trait_id,
+                                trait_function_id,
+                            ),
+                        );
+                        let impl_lookup_context = self.impl_lookup_context();
+                        let generic_function = self
+                            .data
+                            .inference_data
+                            .inference(self.db)
+                            .infer_trait_generic_function(
+                                concrete_trait_function,
+                                &impl_lookup_context,
+                                Some(identifier.stable_ptr().untyped()),
+                            )
+                            .map_err(|err| {
+                                err.report(diagnostics, identifier.stable_ptr().untyped())
+                            })?;
 
-                Ok(ResolvedConcreteItem::Function(self.specialize_function(
-                    diagnostics,
-                    identifier.stable_ptr().untyped(),
-                    generic_function,
-                    generic_args_syntax.unwrap_or_default(),
-                )?))
+                        Ok(ResolvedConcreteItem::Function(self.specialize_function(
+                            diagnostics,
+                            identifier.stable_ptr().untyped(),
+                            generic_function,
+                            generic_args_syntax.unwrap_or_default(),
+                        )?))
+                    }
+                    cairo_lang_defs::ids::TraitItemId::Type(trait_type_id) => {
+                        Ok(ResolvedConcreteItem::Type(
+                            self.db.intern_type(TypeLongId::TraitType(trait_type_id)),
+                        ))
+                    }
+                }
             }
             ResolvedConcreteItem::Impl(impl_id) => {
                 let concrete_trait_id = self.db.impl_concrete_trait(*impl_id)?;
