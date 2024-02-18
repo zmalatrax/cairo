@@ -8,8 +8,8 @@ use std::sync::Arc;
 use ast::PathSegment;
 use cairo_lang_defs::db::validate_attributes_flat;
 use cairo_lang_defs::ids::{
-    EnumId, FunctionTitleId, FunctionWithBodyId, GenericKind, LanguageElementId, LocalVarLongId,
-    LookupItemId, MemberId, ModuleId, TraitFunctionId, TraitId,
+    EnumId, FunctionTitleId, FunctionWithBodyId, GenericKind, ImplDefId, LanguageElementId,
+    LocalVarLongId, LookupItemId, MemberId, ModuleId, TraitFunctionId, TraitId,
 };
 use cairo_lang_diagnostics::{Maybe, ToOption};
 use cairo_lang_filesystem::ids::{FileKind, FileLongId, VirtualFile};
@@ -123,7 +123,11 @@ pub struct ComputationContext<'ctx> {
     pub statements: Arena<semantic::Statement>,
     /// Definitions of semantic variables.
     pub semantic_defs: UnorderedHashMap<semantic::VarId, semantic::Variable>,
+    /// The containing loop context, if in a loop.
     loop_ctx: Option<LoopContext>,
+    /// The containing impl context, if in an impl.
+    // TODO(yg): change to context containing ImplDefId?
+    pub impl_ctx: Option<ImplDefId>,
 }
 impl<'ctx> ComputationContext<'ctx> {
     pub fn new(
@@ -148,6 +152,7 @@ impl<'ctx> ComputationContext<'ctx> {
             statements: Arena::default(),
             semantic_defs,
             loop_ctx: None,
+            impl_ctx: None,
         }
     }
 
@@ -2056,8 +2061,26 @@ fn member_access_expr(
 
     // Find MemberId.
     let member_name = expr_as_identifier(ctx, &rhs_syntax, syntax_db)?;
-    let ty = ctx.reduce_ty(lexpr.ty());
-    let (n_snapshots, long_ty) = peel_snapshots(ctx.db, ty);
+    let mut ty = ctx.reduce_ty(lexpr.ty());
+    let (n_snapshots, mut long_ty) = peel_snapshots(ctx.db, ty);
+
+    // TODO(yg): this is a temporary workaround.
+    match long_ty {
+        TypeLongId::TraitType(trait_type) => {
+            // TODO(yg): don't unwrap.
+            ty = reduce_trait_type_once(
+                ctx.db,
+                ctx.diagnostics,
+                ty, /* TODO(yg): use trait_type directly by having an inner version to avoid
+                     * redundant lookups. */
+                ctx.impl_ctx.unwrap(),
+                &mut ctx.resolver,
+            )?;
+            long_ty = ctx.db.lookup_intern_type(ty);
+        }
+        _ => {}
+    }
+
     match long_ty {
         TypeLongId::Concrete(concrete) => match concrete {
             ConcreteTypeId::Struct(concrete_struct_id) => {
@@ -2256,15 +2279,16 @@ fn expr_function_call(
         // TODO(yg): this is a temporary workaround: reduce trait item once in impl functions calls.
         match function_id.lookup(ctx.db).function.generic_function {
             crate::items::functions::GenericFunctionId::Impl(x) => {
-                // TODO(yg): don't unwrap.
-                let impl_def_id = x.impl_function(ctx.db)?.unwrap().impl_def_id(ctx.db.upcast());
-                expected_ty = reduce_trait_type_once(
-                    ctx.db,
-                    ctx.diagnostics,
-                    expected_ty,
-                    impl_def_id,
-                    &mut ctx.resolver,
-                )?;
+                if let Some(impl_function) = x.impl_function(ctx.db)? {
+                    let impl_def_id = impl_function.impl_def_id(ctx.db.upcast());
+                    expected_ty = reduce_trait_type_once(
+                        ctx.db,
+                        ctx.diagnostics,
+                        expected_ty,
+                        impl_def_id,
+                        &mut ctx.resolver,
+                    )?;
+                }
             }
             _ => {}
         };

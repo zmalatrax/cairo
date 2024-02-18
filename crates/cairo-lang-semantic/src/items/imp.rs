@@ -1500,6 +1500,7 @@ pub fn priv_impl_function_declaration_data(
         FunctionTitleId::Impl(impl_function_id),
         &mut environment,
     );
+
     // TODO(yg): this is a temporary workaround: reduce trait items once in impl functions
     // signatures.
     signature.return_type = reduce_trait_type_once(
@@ -1818,6 +1819,8 @@ pub fn priv_impl_function_body_data(
         Some(&declaration.function_declaration_data.signature),
         environment,
     );
+    ctx.impl_ctx = Some(impl_def_id);
+
     let function_body = function_syntax.body(db.upcast());
     let return_type = declaration.function_declaration_data.signature.return_type;
     let body_expr = compute_root_expr(&mut ctx, &function_body, return_type)?;
