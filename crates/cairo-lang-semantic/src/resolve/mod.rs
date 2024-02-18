@@ -244,6 +244,7 @@ impl<'db> Resolver<'db> {
 
         // Follow modules.
         while segments.peek().is_some() {
+            // TODO(yg): separate PR: directly next instead of peek + next.
             let segment = segments.next().unwrap();
             (callbacks.validate_segment)(diagnostics, segment)?;
             let identifier = segment.identifier_ast(syntax_db);
@@ -495,6 +496,7 @@ impl<'db> Resolver<'db> {
         if module_id == self.module_file_id.0 { None } else { Some(Ok(module_id)) }
     }
 
+    // TODO(yg): renames and comments from here - in a separate PR.
     /// Given the current resolved item, resolves the next segment.
     fn resolve_path_next_segment_concrete(
         &mut self,
@@ -508,20 +510,27 @@ impl<'db> Resolver<'db> {
         let ident = identifier.text(syntax_db);
         match item {
             ResolvedConcreteItem::Module(module_id) => {
+                // Prefix "super" segments should be removed earlier. Middle "super" segments are
+                // not allowed.
                 if ident == "super" {
                     return Err(diagnostics.report(identifier, InvalidPath));
                 }
-                let item_info = self
+                let inner_item_info = self
                     .db
                     .module_item_info_by_name(*module_id, ident)?
                     .ok_or_else(|| diagnostics.report(identifier, PathNotFound(item_type)))?;
-                self.validate_item_visibility(diagnostics, *module_id, identifier, &item_info);
-                let generic_item =
-                    ResolvedGenericItem::from_module_item(self.db, item_info.item_id)?;
+                self.validate_item_visibility(
+                    diagnostics,
+                    *module_id,
+                    identifier,
+                    &inner_item_info,
+                );
+                let generic_inner_item =
+                    ResolvedGenericItem::from_module_item(self.db, inner_item_info.item_id)?;
                 Ok(self.specialize_generic_module_item(
                     diagnostics,
                     identifier,
-                    generic_item,
+                    generic_inner_item,
                     generic_args_syntax,
                 )?)
             }

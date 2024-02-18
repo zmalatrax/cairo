@@ -1,6 +1,7 @@
 use cairo_lang_debug::DebugWithDb;
 use cairo_lang_defs::ids::{
-    EnumId, ExternTypeId, GenericParamId, GenericTypeId, StructId, TraitTypeId,
+    EnumId, ExternTypeId, GenericParamId, GenericTypeId, StructId, TopLevelLanguageElementId,
+    TraitTypeId,
 };
 use cairo_lang_diagnostics::{DiagnosticAdded, Maybe};
 use cairo_lang_proc_macros::SemanticObject;
@@ -109,7 +110,11 @@ impl TypeLongId {
             TypeLongId::GenericParameter(generic_param) => {
                 format!("{}", generic_param.name(db.upcast()).unwrap_or_else(|| "_".into()))
             }
-            TypeLongId::TraitType(trait_type_id) => trait_type_id.name(db.upcast()).into(),
+            TypeLongId::TraitType(trait_type_id) => {
+                // TODO(yg): consider reverting
+                println!("ygg printing trait_type_id: {:?}", trait_type_id);
+                <TraitTypeId as TopLevelLanguageElementId>::name(trait_type_id, db.upcast()).into()
+            }
             TypeLongId::Var(var) => format!("?{}", var.id.0),
             TypeLongId::Missing(_) => "<missing>".to_string(),
         }

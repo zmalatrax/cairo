@@ -63,6 +63,7 @@ impl ResolvedGenericItem {
         })
     }
 
+    // TODO(yg): remove.
     // /// Wraps a TraitItem with the corresponding ResolveGenericItem.
     // pub fn from_trait_item(
     //     db: &dyn SemanticGroup,

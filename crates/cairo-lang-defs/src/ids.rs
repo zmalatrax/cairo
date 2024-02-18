@@ -495,7 +495,8 @@ impl TopLevelLanguageElementId for TraitTypeId {
     }
 
     fn name(&self, db: &dyn DefsGroup) -> SmolStr {
-        db.lookup_intern_trait_type(*self).name(db)
+        // TODO(yg): consider reverting.
+        format!("Self::{}", db.lookup_intern_trait_type(*self).name(db)).into()
     }
 }
 

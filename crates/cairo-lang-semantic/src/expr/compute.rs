@@ -2064,21 +2064,20 @@ fn member_access_expr(
     let mut ty = ctx.reduce_ty(lexpr.ty());
     let (n_snapshots, mut long_ty) = peel_snapshots(ctx.db, ty);
 
-    // TODO(yg): this is a temporary workaround.
-    match long_ty {
-        TypeLongId::TraitType(trait_type) => {
-            // TODO(yg): don't unwrap.
+    // TODO(yg): this is a temporary workaround. If in an impl context and the type is a trait type,
+    // reduce it once.
+    if let Some(impl_ctx) = ctx.impl_ctx {
+        if let TypeLongId::TraitType(_trait_type) = long_ty {
             ty = reduce_trait_type_once(
                 ctx.db,
                 ctx.diagnostics,
-                ty, /* TODO(yg): use trait_type directly by having an inner version to avoid
-                     * redundant lookups. */
-                ctx.impl_ctx.unwrap(),
+                ty, /* TODO(yg): use `_trait_type` directly by having an inner version to
+                     * avoid redundant lookups. */
+                impl_ctx,
                 &mut ctx.resolver,
             )?;
             long_ty = ctx.db.lookup_intern_type(ty);
         }
-        _ => {}
     }
 
     match long_ty {
