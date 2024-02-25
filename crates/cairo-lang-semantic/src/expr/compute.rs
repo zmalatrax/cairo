@@ -6,6 +6,7 @@ use std::ops::Deref;
 use std::sync::Arc;
 
 use ast::PathSegment;
+use cairo_lang_debug::DebugWithDb;
 use cairo_lang_defs::db::validate_attributes_flat;
 use cairo_lang_defs::ids::{
     EnumId, FunctionTitleId, FunctionWithBodyId, GenericKind, ImplDefId, LanguageElementId,
@@ -532,8 +533,23 @@ fn compute_expr_binary_semantic(
                 _ => return Err(ctx.diagnostics.report(lhs_syntax, InvalidLhsForAssignment)),
             };
 
+            // TODO(yg): is reduce_trait_type_once needed? Is it needed for expected type too?
             let expected_ty = ctx.reduce_ty(member_path.ty());
-            let actual_ty = ctx.reduce_ty(rexpr.ty());
+            let mut actual_ty = ctx.reduce_ty(rexpr.ty());
+            println!("yg expr eq actual ty before: {:?}", actual_ty);
+            if let Some(impl_ctx) = ctx.impl_ctx {
+                if let TypeLongId::TraitType(_trait_type) = db.lookup_intern_type(actual_ty) {
+                    actual_ty = reduce_trait_type_once(
+                        ctx.db,
+                        ctx.diagnostics,
+                        actual_ty, /* TODO(yg): use `_trait_type` directly by having an inner
+                                    * version to avoid redundant lookups. */
+                        impl_ctx,
+                        &mut ctx.resolver,
+                    )?;
+                }
+            }
+            println!("yg expr eq actual ty after: {:?}", actual_ty);
 
             if ctx.resolver.inference().conform_ty(actual_ty, expected_ty).is_err() {
                 return Err(ctx
@@ -2066,19 +2082,19 @@ fn member_access_expr(
 
     // TODO(yg): this is a temporary workaround. If in an impl context and the type is a trait type,
     // reduce it once.
-    if let Some(impl_ctx) = ctx.impl_ctx {
-        if let TypeLongId::TraitType(_trait_type) = long_ty {
-            ty = reduce_trait_type_once(
-                ctx.db,
-                ctx.diagnostics,
-                ty, /* TODO(yg): use `_trait_type` directly by having an inner version to
-                     * avoid redundant lookups. */
-                impl_ctx,
-                &mut ctx.resolver,
-            )?;
-            long_ty = ctx.db.lookup_intern_type(ty);
-        }
-    }
+    // if let Some(impl_ctx) = ctx.impl_ctx {
+    //     if let TypeLongId::TraitType(_trait_type) = long_ty {
+    //         ty = reduce_trait_type_once(
+    //             ctx.db,
+    //             ctx.diagnostics,
+    //             ty, /* TODO(yg): use `_trait_type` directly by having an inner version to
+    //                  * avoid redundant lookups. */
+    //             impl_ctx,
+    //             &mut ctx.resolver,
+    //         )?;
+    //         long_ty = ctx.db.lookup_intern_type(ty);
+    //     }
+    // }
 
     match long_ty {
         TypeLongId::Concrete(concrete) => match concrete {
@@ -2277,8 +2293,8 @@ fn expr_function_call(
 
         // TODO(yg): this is a temporary workaround: reduce trait item once in impl functions calls.
         match function_id.lookup(ctx.db).function.generic_function {
-            crate::items::functions::GenericFunctionId::Impl(x) => {
-                if let Some(impl_function) = x.impl_function(ctx.db)? {
+            crate::items::functions::GenericFunctionId::Impl(impl_generic_function_id) => {
+                if let Some(impl_function) = impl_generic_function_id.impl_function(ctx.db)? {
                     let impl_def_id = impl_function.impl_def_id(ctx.db.upcast());
                     expected_ty = reduce_trait_type_once(
                         ctx.db,
@@ -2292,6 +2308,7 @@ fn expr_function_call(
             _ => {}
         };
 
+        // TODO(yg): may be needed for actual type too.
         let actual_ty = ctx.reduce_ty(arg_typ);
         if !arg_typ.is_missing(ctx.db)
             && ctx.resolver.inference().conform_ty(actual_ty, expected_ty).is_err()
@@ -2328,8 +2345,26 @@ fn expr_function_call(
         });
     }
 
+    // TODO(yg): 1. This repeats a lot, extract to a function. 2. once is not enough, eventual type
+    // here can't be trait type.
+    let mut expr_function_call_type = signature.return_type;
+    match function_id.lookup(ctx.db).function.generic_function {
+        crate::items::functions::GenericFunctionId::Impl(impl_generic_function_id) => {
+            if let Some(impl_function) = impl_generic_function_id.impl_function(ctx.db)? {
+                let impl_def_id = impl_function.impl_def_id(ctx.db.upcast());
+                expr_function_call_type = reduce_trait_type_once(
+                    ctx.db,
+                    ctx.diagnostics,
+                    expr_function_call_type,
+                    impl_def_id,
+                    &mut ctx.resolver,
+                )?;
+            }
+        }
+        _ => {}
+    };
     let expr_function_call =
-        ExprFunctionCall { function: function_id, args, ty: signature.return_type, stable_ptr };
+        ExprFunctionCall { function: function_id, args, ty: expr_function_call_type, stable_ptr };
     // Check panicable.
     if signature.panicable && has_panic_incompatibility(ctx, &expr_function_call)? {
         // TODO(spapini): Delay this check until after inference, to allow resolving specific
@@ -2415,7 +2450,9 @@ pub fn compute_statement_semantic(
     let statement = match &syntax {
         ast::Statement::Let(let_syntax) => {
             let expr = compute_expr_semantic(ctx, &let_syntax.rhs(syntax_db));
-            let inferred_type = expr.ty();
+            let mut inferred_type = expr.ty();
+            println!("yg inferred_type: {:?}", inferred_type.debug(db.elongate()));
+
             let rhs_expr_id = expr.id;
 
             let ty = match let_syntax.type_clause(syntax_db) {

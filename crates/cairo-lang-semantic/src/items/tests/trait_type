@@ -34,12 +34,12 @@ impl MyImpl of MyTrait {
     type InputType = MyStruct<u32>;
     type OutputType = MyStruct<u32>;
     fn foo(x: MyImpl::InputType) -> MyImpl::OutputType {
-        x
+        MyStruct { value: x.value }
     }
 }
 fn main() {
-   let x = MyStruct { value: 3 };
-   let _y = MyImpl::foo(x);
+   let x = MyStruct { value: 3_u32 };
+   let _y: MyStruct<u32> = MyImpl::foo(x);
 }
 
 //! > expected_diagnostics

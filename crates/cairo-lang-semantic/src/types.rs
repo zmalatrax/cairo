@@ -113,7 +113,7 @@ impl TypeLongId {
             }
             TypeLongId::TraitType(trait_type_id) => {
                 // TODO(yg): consider reverting
-                println!("ygg printing trait_type_id: {:?}", trait_type_id);
+                // println!("ygg printing trait_type_id: {:?}", trait_type_id.debug(db.elongate()));
                 <TraitTypeId as TopLevelLanguageElementId>::name(trait_type_id, db.upcast()).into()
             }
             TypeLongId::Var(var) => format!("?{}", var.id.0),
