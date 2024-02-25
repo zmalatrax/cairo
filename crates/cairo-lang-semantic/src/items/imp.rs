@@ -1,3 +1,4 @@
+use std::collections::btree_map::OccupiedEntry;
 use std::collections::BTreeSet;
 use std::sync::Arc;
 use std::vec;
@@ -15,7 +16,7 @@ use cairo_lang_diagnostics::{
 use cairo_lang_filesystem::ids::UnstableSalsaId;
 use cairo_lang_proc_macros::{DebugWithDb, SemanticObject};
 use cairo_lang_syntax as syntax;
-use cairo_lang_utils::ordered_hash_map::OrderedHashMap;
+use cairo_lang_utils::ordered_hash_map::{Entry, OrderedHashMap};
 use cairo_lang_utils::ordered_hash_set::OrderedHashSet;
 use cairo_lang_utils::unordered_hash_map::UnorderedHashMap;
 use cairo_lang_utils::{define_short_id, extract_matches, try_extract_matches};
@@ -442,8 +443,11 @@ pub struct ImplDefinitionData {
     /// computing the items' diagnostics require a query about their impl, forming a cycle of
     /// queries. Adding the items' diagnostics only after the whole computation breaks this cycle.
     diagnostics: Diagnostics<SemanticDiagnostic>,
+    // TODO(yg): separate pr: wrap with arc?
     function_asts: OrderedHashMap<ImplFunctionId, ast::FunctionWithBody>,
     item_type_asts: Arc<OrderedHashMap<ImplTypeId, ast::ItemTypeAlias>>,
+    // TODO(yg): doc.
+    item_id_by_name: Arc<OrderedHashMap<SmolStr, ImplItemId>>,
 }
 
 // --- Selectors ---
@@ -503,6 +507,15 @@ pub fn impl_function_by_trait_function(
         }
     }
     Ok(None)
+}
+
+/// Query implementation of [crate::db::SemanticGroup::impl_item_by_name].
+pub fn impl_item_by_name(
+    db: &dyn SemanticGroup,
+    impl_def_id: ImplDefId,
+    name: SmolStr,
+) -> Maybe<Option<ImplItemId>> {
+    Ok(db.priv_impl_definition_data(impl_def_id)?.item_id_by_name.get(&name).cloned())
 }
 
 /// Query implementation of [crate::db::SemanticGroup::impl_types].
@@ -585,7 +598,8 @@ pub fn priv_impl_definition_data(
 
     let mut function_asts = OrderedHashMap::default();
     let mut item_type_asts = OrderedHashMap::default();
-    let mut impl_item_names = OrderedHashSet::<_>::default();
+    // TODO(yg): can it be unordered?
+    let mut item_id_by_name = OrderedHashMap::default();
 
     if let MaybeImplBody::Some(body) = impl_ast.body(syntax_db) {
         for item in body.items(syntax_db).elements(syntax_db) {
@@ -629,7 +643,10 @@ pub fn priv_impl_definition_data(
                     ));
                     let name_node = func.declaration(syntax_db).name(syntax_db);
                     let name = name_node.text(syntax_db);
-                    if !impl_item_names.insert(name.clone()) {
+                    if item_id_by_name
+                        .insert(name.clone(), ImplItemId::Function(impl_function_id))
+                        .is_some()
+                    {
                         diagnostics.report_by_ptr(
                             name_node.stable_ptr().untyped(),
                             SemanticDiagnosticKind::NameDefinedMultipleTimes { name },
@@ -642,7 +659,10 @@ pub fn priv_impl_definition_data(
                         db.intern_impl_type(ImplTypeLongId(module_file_id, ty.stable_ptr()));
                     let name_node = ty.name(syntax_db);
                     let name = name_node.text(syntax_db);
-                    if !impl_item_names.insert(name.clone()) {
+                    if item_id_by_name
+                        .insert(name.clone(), ImplItemId::Type(impl_type_id))
+                        .is_some()
+                    {
                         diagnostics.report_by_ptr(
                             name_node.stable_ptr().untyped(),
                             SemanticDiagnosticKind::NameDefinedMultipleTimes { name },
@@ -669,6 +689,7 @@ pub fn priv_impl_definition_data(
     // to verify here that all items in `concrete_trait` appear in this impl.
     // TODO(yuval): Once default implementation of trait functions is supported, filter such
     // functions out.
+    let impl_item_names: OrderedHashSet<SmolStr> = item_id_by_name.keys().cloned().collect();
     let trait_id = db.lookup_intern_concrete_trait(concrete_trait).trait_id;
     let trait_item_names = db.trait_item_names(trait_id)?;
     let missing_items_in_impl =
@@ -686,6 +707,7 @@ pub fn priv_impl_definition_data(
         diagnostics: diagnostics.build(),
         function_asts,
         item_type_asts: item_type_asts.into(),
+        item_id_by_name: item_id_by_name.into(),
     })
 }
 
@@ -1739,6 +1761,7 @@ fn validate_impl_function_signature(
     Ok(trait_function_id)
 }
 
+// TODO(yg): should change to a query `impl_def_type_by_trait_type`? Remove?
 // TODO(yg): doc, query, cycle handling. move to the appropriate file. Do it inside resolve_type?
 pub fn reduce_trait_type_once(
     db: &dyn SemanticGroup,

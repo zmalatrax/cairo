@@ -37,6 +37,7 @@ pub enum TypeLongId {
     GenericParameter(GenericParamId),
     // TODO(yg): add a variant here for trait type, and do similar to generic type as in
     // determine_base_item_in_local_scope.
+    // TODO(yg): with the new logic, maybe this variant is not needed.
     TraitType(TraitTypeId),
     Var(TypeVar),
     Missing(#[dont_rewrite] DiagnosticAdded),

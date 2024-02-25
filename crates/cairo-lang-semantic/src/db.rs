@@ -5,8 +5,8 @@ use cairo_lang_defs::diagnostic_utils::StableLocation;
 use cairo_lang_defs::ids::{
     ConstantId, EnumId, ExternFunctionId, ExternTypeId, FreeFunctionId, FunctionTitleId,
     FunctionWithBodyId, GenericParamId, GenericTypeId, ImplAliasId, ImplDefId, ImplFunctionId,
-    ImplTypeId, LookupItemId, ModuleId, ModuleItemId, ModuleTypeAliasId, StructId, TraitFunctionId,
-    TraitId, TraitItemId, TraitTypeId, UseId, VariantId,
+    ImplItemId, ImplTypeId, LookupItemId, ModuleId, ModuleItemId, ModuleTypeAliasId, StructId,
+    TraitFunctionId, TraitId, TraitItemId, TraitTypeId, UseId, VariantId,
 };
 use cairo_lang_diagnostics::{Diagnostics, DiagnosticsBuilder, Maybe};
 use cairo_lang_filesystem::db::{AsFilesGroupMut, FilesGroup};
@@ -359,7 +359,7 @@ pub trait SemanticGroup:
     /// Returns the names of all the items of a trait.
     #[salsa::invoke(items::trt::trait_item_names)]
     fn trait_item_names(&self, trait_id: TraitId) -> Maybe<OrderedHashSet<SmolStr>>;
-    /// Returns all the items of a trait.
+    /// Returns the item of the trait, by the given `name`, if exists.
     #[salsa::invoke(items::trt::trait_item_by_name)]
     fn trait_item_by_name(&self, trait_id: TraitId, name: SmolStr) -> Maybe<Option<TraitItemId>>;
     /// Returns the functions of a trait.
@@ -572,6 +572,10 @@ pub trait SemanticGroup:
         &self,
         impl_def_id: ImplDefId,
     ) -> Diagnostics<SemanticDiagnostic>;
+    /// Returns the item of the impl, by the given `name`, if exists.
+    #[salsa::invoke(items::imp::impl_item_by_name)]
+    fn impl_item_by_name(&self, impl_def_id: ImplDefId, name: SmolStr)
+    -> Maybe<Option<ImplItemId>>;
     /// Returns the type items in the impl.
     #[salsa::invoke(items::imp::impl_types)]
     fn impl_types(

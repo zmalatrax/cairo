@@ -33,7 +33,7 @@ trait MyTrait {
 impl MyImpl of MyTrait {
     type InputType = MyStruct<u32>;
     type OutputType = MyStruct<u32>;
-    fn foo(x: MyTrait::InputType) -> MyTrait::OutputType {
+    fn foo(x: MyImpl::InputType) -> MyImpl::OutputType {
         x
     }
 }
@@ -43,7 +43,3 @@ fn main() {
 }
 
 //! > expected_diagnostics
-error: Unexpected return type. Expected: "test::MyStruct::<core::integer::u32>", found: "Self::InputType".
- --> lib.cairo:12:58
-    fn foo(x: MyTrait::InputType) -> MyTrait::OutputType {
-                                                         ^
