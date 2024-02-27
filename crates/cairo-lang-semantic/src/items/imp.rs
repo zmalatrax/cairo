@@ -1530,23 +1530,23 @@ pub fn priv_impl_function_declaration_data(
 
     // TODO(yg): this is a temporary workaround: reduce trait items once in impl functions
     // signatures.
-    // signature.return_type = reduce_trait_type_once(
-    //     db,
-    //     &mut diagnostics,
-    //     signature.return_type,
-    //     impl_def_id,
-    //     &mut resolver,
-    // )?;
-    // for param in &mut signature.params {
-    //     println!("yg old param type: {:?}", param.ty.debug(db.elongate()));
-    //     let reduced_type =
-    //         reduce_trait_type_once(db, &mut diagnostics, param.ty, impl_def_id, &mut resolver)?;
-    //     println!("yg reduced param type: {:?}", reduced_type.debug(db.elongate()));
-    //     param.ty = reduced_type;
-    // }
-    // for param in &mut signature.params {
-    //     println!("yg after param type: {:?}", param.ty.debug(db.elongate()));
-    // }
+    signature.return_type = reduce_trait_type_once(
+        db,
+        &mut diagnostics,
+        signature.return_type,
+        impl_def_id,
+        &mut resolver,
+    )?;
+    for param in &mut signature.params {
+        println!("yg old param type: {:?}", param.ty.debug(db.elongate()));
+        let reduced_type =
+            reduce_trait_type_once(db, &mut diagnostics, param.ty, impl_def_id, &mut resolver)?;
+        println!("yg reduced param type: {:?}", reduced_type.debug(db.elongate()));
+        param.ty = reduced_type;
+    }
+    for param in &mut signature.params {
+        println!("yg after param type: {:?}", param.ty.debug(db.elongate()));
+    }
 
     let trait_function_id = validate_impl_function_signature(
         db,
