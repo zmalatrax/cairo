@@ -13,7 +13,7 @@ fn concretize_function(
     rewriter: &mut SubstitutionRewriter<'_>,
     function: FunctionId,
 ) -> Maybe<FunctionId> {
-    let long_id = match db.lookup_intern_lowering_function(function) {
+    let long_id = match function.lookup_intern(db) {
         FunctionLongId::Semantic(id) => FunctionLongId::Semantic(rewriter.rewrite(id)?),
         FunctionLongId::Generated(GeneratedFunction { parent, element }) => {
             FunctionLongId::Generated(GeneratedFunction {

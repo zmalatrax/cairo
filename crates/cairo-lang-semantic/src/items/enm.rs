@@ -287,7 +287,7 @@ pub trait SemanticEnumEx<'a>: Upcast<dyn SemanticGroup + 'a> {
         //   always have the correct number of generic arguments.
         let db = self.upcast();
         let generic_params = db.enum_generic_params(concrete_enum_id.enum_id(db))?;
-        let generic_args = db.lookup_intern_concrete_enum(concrete_enum_id).generic_args;
+        let generic_args = concrete_enum_id.lookup_intern(db).generic_args;
         let substitution = GenericSubstitution::new(&generic_params, &generic_args);
         SubstitutionRewriter { db, substitution: &substitution }.rewrite(ConcreteVariant {
             concrete_enum_id,

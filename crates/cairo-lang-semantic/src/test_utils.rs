@@ -376,7 +376,7 @@ fn get_recursive_module_semantic_diagnostics(
 
 /// Returns true if the given submodule is inline (i.e. has a body), false otherwise.
 fn is_submodule_inline(db: &dyn SemanticGroup, submodule: SubmoduleId) -> bool {
-    let SubmoduleLongId(_, ptr) = db.lookup_intern_submodule(submodule);
+    let SubmoduleLongId(_, ptr) = submodule.lookup_intern(db.upcast());
     match ptr.lookup(db.upcast()).body(db.upcast()) {
         ast::MaybeModuleBody::Some(_) => true,
         ast::MaybeModuleBody::None(_) => false,

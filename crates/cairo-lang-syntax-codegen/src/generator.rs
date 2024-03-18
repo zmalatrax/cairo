@@ -602,7 +602,7 @@ fn gen_struct_code(name: String, members: Vec<Member>, is_terminal: bool) -> rus
                 ) -> Self::Green {
                     let children: Vec<GreenId> = vec![$args];
                     let width = children.iter().copied().map(|id|
-                        db.lookup_intern_green(id).width()).sum();
+                       id.lookup_intern(db).width()).sum();
                     $(&green_name)(db.intern_green(Arc::new(GreenNode {
                         kind: SyntaxKind::$(&name),
                         details: GreenNodeDetails::Node { children, width },
@@ -620,7 +620,7 @@ fn gen_struct_code(name: String, members: Vec<Member>, is_terminal: bool) -> rus
                 pub fn new_green(db: &dyn SyntaxGroup, $params) -> $(&green_name) {
                     let children: Vec<GreenId> = vec![$args];
                     let width = children.iter().copied().map(|id|
-                        db.lookup_intern_green(id).width()).sum();
+                       id.lookup_intern(db).width()).sum();
                     $(&green_name)(db.intern_green(Arc::new(GreenNode {
                         kind: SyntaxKind::$(&name),
                         details: GreenNodeDetails::Node { children, width },

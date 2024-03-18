@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use cairo_lang_filesystem::ids::FileId;
 use cairo_lang_filesystem::span::TextWidth;
-use cairo_lang_utils::define_short_id;
+use cairo_lang_utils::{define_short_id, LookupInternUpcast, Upcast};
 
 use super::db::SyntaxGroup;
 use super::green::GreenNode;
@@ -11,6 +11,15 @@ use super::SyntaxNode;
 use crate::node::stable_ptr::SyntaxStablePtr;
 
 define_short_id!(GreenId, Arc::<GreenNode>, SyntaxGroup, lookup_intern_green);
+impl<'a> LookupInternUpcast<'a, (dyn SyntaxGroup + 'a), Arc<GreenNode>> for GreenId {
+    fn lookup_intern(
+        &self,
+        db: impl cairo_lang_utils::Upcast<&'a (dyn SyntaxGroup + 'a)>,
+    ) -> Arc<GreenNode> {
+        // TODO(yg): *db.upcast()
+        SyntaxGroup::lookup_intern_green(*Upcast::upcast(&db), *self)
+    }
+}
 impl GreenId {
     /// Returns the width of the node of this green id.
     pub fn width(&self, db: &dyn SyntaxGroup) -> TextWidth {
@@ -22,6 +31,15 @@ impl GreenId {
 }
 
 define_short_id!(SyntaxStablePtrId, SyntaxStablePtr, SyntaxGroup, lookup_intern_stable_ptr);
+impl<'a> LookupInternUpcast<'a, (dyn SyntaxGroup + 'a), SyntaxStablePtr> for SyntaxStablePtrId {
+    fn lookup_intern(
+        &self,
+        db: impl cairo_lang_utils::Upcast<&'a (dyn SyntaxGroup + 'a)>,
+    ) -> SyntaxStablePtr {
+        // TODO(yg): *db.upcast()
+        SyntaxGroup::lookup_intern_stable_ptr(*Upcast::upcast(&db), *self)
+    }
+}
 impl SyntaxStablePtrId {
     /// Lookups a syntax node using a stable syntax pointer.
     /// Should only be called on the root from which the stable pointer was generated.

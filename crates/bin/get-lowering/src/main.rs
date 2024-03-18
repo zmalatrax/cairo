@@ -110,7 +110,7 @@ impl fmt::Debug for PhasesFormatter<'_> {
         apply_stage("after_add_destructs", &|lowered| add_destructs(db, function_id, lowered));
         apply_stage("scrub_units", &|lowered| scrub_units(db, lowered));
 
-        for phase in db.lookup_intern_strategy(strategy).0 {
+        for phase in strategy.lookup_intern(db).0 {
             let name = format!("{phase:?}").to_case(convert_case::Case::Snake);
             phase.apply(db, function_id, &mut curr_state).unwrap();
             add_stage_state(&name, &curr_state);

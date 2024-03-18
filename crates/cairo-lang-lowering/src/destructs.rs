@@ -412,7 +412,7 @@ pub fn add_destructs(
                 let new_tuple_var = variables.new_var(VarRequest { ty: tuple_ty, location });
                 let orig_tuple_var = *tuple_var;
                 *tuple_var = new_tuple_var;
-                let long_ty = db.lookup_intern_type(tuple_ty);
+                let long_ty = tuple_ty.lookup_intern(db);
                 let TypeLongId::Tuple(tys) = long_ty else { unreachable!() };
 
                 let vars = tys

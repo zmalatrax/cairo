@@ -97,6 +97,14 @@ pub fn borrow_as_box<T: Default, R, F: FnOnce(Box<T>) -> (R, Box<T>)>(ptr: &mut 
     res
 }
 
+// pub trait LookupIntern<DynDbGroup: ?Sized, LongId> {
+//     fn lookup_intern(&self, db: &DynDbGroup) -> LongId;
+// }
+// TODO(yg): rename after removing the above.
+pub trait LookupInternUpcast<'a, DynDbGroup: ?Sized + 'a, LongId> {
+    fn lookup_intern(&self, db: impl Upcast<&'a DynDbGroup>) -> LongId;
+}
+
 // Defines a short id struct for use with salsa interning.
 // Interning is the process of representing a value as an id in a table.
 // We usually denote the value type as "long id", and the id type as "short id" or just "id".
@@ -110,6 +118,16 @@ macro_rules! define_short_id {
     ($short_id:ident, $long_id:path, $db:ident, $lookup:ident) => {
         #[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
         pub struct $short_id(salsa::InternId);
+        // impl cairo_lang_utils::LookupIntern<dyn $db, $long_id> for $short_id {
+        //     fn lookup_intern(&self, db: &dyn cairo_lang_utils::Upcast<dyn $db>) -> $long_id {
+        //         db.$lookup(*self)
+        //     }
+        // }
+        // impl $short_id {
+        //     pub fn lookup_intern(&self, db: &dyn cairo_lang_utils::Upcast<dyn $db>) -> $long_id {
+        //         db.$lookup(*self)
+        //     }
+        // }
         impl salsa::InternKey for $short_id {
             fn from_intern_id(salsa_id: salsa::InternId) -> Self {
                 Self(salsa_id)
@@ -147,6 +165,11 @@ impl<T: ?Sized> Upcast<T> for T {
         self
     }
 }
+// impl<T: ?Sized> Upcast<T> for &dyn T {
+//     fn upcast(&self) -> &T {
+//         *self
+//     }
+// }
 
 pub trait UpcastMut<T: ?Sized> {
     fn upcast_mut(&mut self) -> &mut T;

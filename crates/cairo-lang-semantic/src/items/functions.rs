@@ -14,7 +14,9 @@ use cairo_lang_proc_macros::{DebugWithDb, SemanticObject};
 use cairo_lang_syntax as syntax;
 use cairo_lang_syntax::attribute::structured::Attribute;
 use cairo_lang_syntax::node::{ast, Terminal, TypedSyntaxNode};
-use cairo_lang_utils::{define_short_id, try_extract_matches, OptionFrom};
+use cairo_lang_utils::{
+    define_short_id, try_extract_matches, LookupInternUpcast, OptionFrom, Upcast,
+};
 use itertools::{chain, Itertools};
 use smol_str::SmolStr;
 use syntax::attribute::consts::{MUST_USE_ATTR, UNSTABLE_ATTR};
@@ -241,14 +243,19 @@ impl DebugWithDb<dyn SemanticGroup> for FunctionLongId {
 }
 
 define_short_id!(FunctionId, FunctionLongId, SemanticGroup, lookup_intern_function);
+impl<'a> LookupInternUpcast<'a, (dyn SemanticGroup + 'a), FunctionLongId> for FunctionId {
+    fn lookup_intern(
+        &self,
+        db: impl cairo_lang_utils::Upcast<&'a (dyn SemanticGroup + 'a)>,
+    ) -> FunctionLongId {
+        // TODO(yg): *db.upcast()
+        SemanticGroup::lookup_intern_function(*Upcast::upcast(&db), *self)
+    }
+}
 semantic_object_for_id!(FunctionId, lookup_intern_function, intern_function, FunctionLongId);
 impl FunctionId {
-    pub fn lookup(&self, db: &dyn SemanticGroup) -> FunctionLongId {
-        db.lookup_intern_function(*self)
-    }
-
     pub fn get_concrete(&self, db: &dyn SemanticGroup) -> ConcreteFunction {
-        self.lookup(db).function
+        self.lookup_intern(db).function
     }
 
     /// Returns the ExternFunctionId if this is an extern function. Otherwise returns none.
@@ -738,7 +745,7 @@ pub fn concrete_function_signature(
     function_id: FunctionId,
 ) -> Maybe<Signature> {
     let ConcreteFunction { generic_function, generic_args, .. } =
-        db.lookup_intern_function(function_id).function;
+        function_id.lookup_intern(db).function;
     let generic_params = generic_function.generic_params(db)?;
     let generic_signature = generic_function.generic_signature(db)?;
     // TODO(spapini): When trait generics are supported, they need to be substituted

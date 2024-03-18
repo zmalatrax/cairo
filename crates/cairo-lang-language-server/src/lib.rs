@@ -397,7 +397,7 @@ impl Backend {
         };
         for uri in open_files {
             let file_id = file(db, uri.clone());
-            if let FileLongId::OnDisk(file_path) = db.lookup_intern_file(file_id) {
+            if let FileLongId::OnDisk(file_path) = file_id.lookup_intern(db) {
                 self.detect_crate_for(db, file_path).await;
             }
             query_diags(db, file_id);
@@ -541,7 +541,7 @@ impl Backend {
         let mut db = self.db_mut().await;
         for uri in self.state_mutex.lock().await.open_files.iter() {
             let file_id = file(&db, uri.clone());
-            if let FileLongId::OnDisk(file_path) = db.lookup_intern_file(file_id) {
+            if let FileLongId::OnDisk(file_path) = file_id.lookup_intern(db) {
                 self.detect_crate_for(&mut db, file_path).await;
             }
         }
@@ -1077,7 +1077,7 @@ fn resolved_concrete_item_def(
 ) -> Option<SyntaxStablePtrId> {
     match item {
         ResolvedConcreteItem::Type(ty) => {
-            if let TypeLongId::GenericParameter(param) = db.lookup_intern_type(ty) {
+            if let TypeLongId::GenericParameter(param) = ty.lookup_intern(db) {
                 Some(param.untyped_stable_ptr(db.upcast()))
             } else {
                 None
@@ -1644,7 +1644,7 @@ fn file(db: &RootDatabase, uri: Url) -> FileId {
 
 /// Gets the canonical URI for a file.
 fn get_uri(db: &dyn FilesGroup, file_id: FileId) -> Url {
-    let virtual_file = match db.lookup_intern_file(file_id) {
+    let virtual_file = match file_id.lookup_intern(db) {
         FileLongId::OnDisk(path) => return Url::from_file_path(path).unwrap(),
         FileLongId::Virtual(virtual_file) => virtual_file,
     };

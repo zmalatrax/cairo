@@ -114,7 +114,7 @@ impl<'a> DiagnosticsReporter<'a> {
             };
 
             if db.file_content(module_file).is_none() {
-                match db.lookup_intern_file(module_file) {
+                match module_file.lookup_intern(db) {
                     FileLongId::OnDisk(path) => {
                         self.callback.on_diagnostic(FormattedDiagnosticEntry::new(
                             Severity::Error,

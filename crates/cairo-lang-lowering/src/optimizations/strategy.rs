@@ -81,7 +81,7 @@ impl OptimizationStrategyId {
     ) -> Maybe<FlatLowered> {
         let mut lowered = (*db.concrete_function_with_body_postpanic_lowered(function)?).clone();
 
-        for phase in db.lookup_intern_strategy(self).0 {
+        for phase inself.lookup_intern(db).0 {
             phase.apply(db, function, &mut lowered)?;
         }
 

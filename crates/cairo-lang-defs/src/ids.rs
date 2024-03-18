@@ -32,7 +32,7 @@ use cairo_lang_syntax::node::ids::SyntaxStablePtrId;
 use cairo_lang_syntax::node::kind::SyntaxKind;
 use cairo_lang_syntax::node::stable_ptr::SyntaxStablePtr;
 use cairo_lang_syntax::node::{ast, Terminal, TypedSyntaxNode};
-use cairo_lang_utils::{define_short_id, OptionFrom};
+use cairo_lang_utils::{define_short_id, LookupInternUpcast, OptionFrom, Upcast};
 use smol_str::SmolStr;
 
 use crate::db::DefsGroup;
@@ -512,6 +512,15 @@ define_language_element_id_basic!(
     ast::GenericParam,
     lookup_intern_generic_param
 );
+impl<'a> LookupInternUpcast<'a, (dyn DefsGroup + 'a), GenericParamLongId> for GenericParamId {
+    fn lookup_intern(
+        &self,
+        db: impl cairo_lang_utils::Upcast<&'a (dyn DefsGroup + 'a)>,
+    ) -> GenericParamLongId {
+        // TODO(yg): *db.upcast()
+        DefsGroup::lookup_intern_generic_param(*Upcast::upcast(&db), *self)
+    }
+}
 impl GenericParamLongId {
     pub fn name(&self, db: &dyn SyntaxGroup) -> Option<SmolStr> {
         let SyntaxStablePtr::Child { key_fields, kind, .. } = db.lookup_intern_stable_ptr(self.1.0)
@@ -554,13 +563,13 @@ impl GenericParamLongId {
 }
 impl GenericParamId {
     pub fn name(&self, db: &dyn DefsGroup) -> Option<SmolStr> {
-        db.lookup_intern_generic_param(*self).name(db.upcast())
+        self.lookup_intern(db).name(db.upcast())
     }
     pub fn debug_name(&self, db: &dyn DefsGroup) -> SmolStr {
-        db.lookup_intern_generic_param(*self).debug_name(db.upcast())
+        self.lookup_intern(db).debug_name(db.upcast())
     }
     pub fn format(&self, db: &dyn DefsGroup) -> String {
-        let long_ids = db.lookup_intern_generic_param(*self);
+        let long_ids = self.lookup_intern(db);
         let SyntaxStablePtr::Child { key_fields, kind, .. } =
             db.lookup_intern_stable_ptr(long_ids.1.0)
         else {
@@ -581,10 +590,10 @@ impl GenericParamId {
     }
 
     pub fn kind(&self, db: &dyn DefsGroup) -> GenericKind {
-        db.lookup_intern_generic_param(*self).kind(db.upcast())
+        self.lookup_intern(db).kind(db.upcast())
     }
     pub fn generic_item(&self, db: &dyn DefsGroup) -> GenericItemId {
-        db.lookup_intern_generic_param(*self).generic_item(db.upcast())
+        self.lookup_intern(db).generic_item(db.upcast())
     }
 }
 impl DebugWithDb<dyn DefsGroup> for GenericParamLongId {
@@ -647,7 +656,7 @@ impl GenericItemId {
         stable_ptr: SyntaxStablePtrId,
     ) -> Self {
         let SyntaxStablePtr::Child { parent: parent0, kind, .. } =
-            db.lookup_intern_stable_ptr(stable_ptr)
+            stable_ptr.lookup_intern(db.upcast())
         else {
             panic!()
         };

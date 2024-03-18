@@ -316,7 +316,7 @@ pub fn get_libfunc_signature(
             ..
         } = err
         {
-            let function = db.lookup_intern_sierra_function(function);
+            let function = function.lookup_intern(db);
             panic!("Missing function {:?}", function.debug(db));
         }
         // If panic happens here, make sure the specified libfunc name is in one of the STR_IDs of
@@ -382,7 +382,7 @@ pub fn get_concrete_libfunc_id(
 
     let semantic =
         extract_matches!(function.lookup(db.upcast()), lowering::ids::FunctionLongId::Semantic);
-    let concrete_function = db.lookup_intern_function(semantic).function;
+    let concrete_function = semantic.lookup_intern(db).function;
     let extern_id = extract_matches!(concrete_function.generic_function, GenericFunctionId::Extern);
 
     let mut generic_args = vec![];

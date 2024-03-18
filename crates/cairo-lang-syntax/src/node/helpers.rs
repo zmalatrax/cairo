@@ -1,3 +1,4 @@
+use cairo_lang_utils::LookupInternUpcast;
 use smol_str::SmolStr;
 
 use super::ast::{
@@ -31,7 +32,7 @@ impl ast::UsePathLeafPtr {
 impl GetIdentifier for ast::UsePathLeafPtr {
     fn identifier(&self, db: &dyn SyntaxGroup) -> SmolStr {
         let alias_clause_green = self.alias_clause_green(db).0;
-        let green_node = db.lookup_intern_green(alias_clause_green);
+        let green_node = alias_clause_green.lookup_intern(db);
         let children = match &green_node.details {
             GreenNodeDetails::Node { children, width: _ } => children,
             _ => panic!("Unexpected token"),

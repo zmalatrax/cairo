@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use cairo_lang_utils::ordered_hash_map::OrderedHashMap;
-use cairo_lang_utils::Upcast;
+use cairo_lang_utils::{LookupInternUpcast, Upcast};
 use serde::{Deserialize, Serialize};
 
 use crate::cfg::CfgSet;
@@ -102,7 +102,8 @@ pub struct ExperimentalFeaturesConfig {
 
 // Salsa database interface.
 #[salsa::query_group(FilesDatabase)]
-pub trait FilesGroup {
+// TODO(yg): is this needed?
+pub trait FilesGroup: salsa::plumbing::HasQueryGroup<crate::db::FilesDatabase> {
     #[salsa::interned]
     fn intern_crate(&self, crt: CrateLongId) -> CrateId;
     #[salsa::interned]
@@ -218,19 +219,30 @@ pub trait AsFilesGroupMut {
     fn as_files_group_mut(&mut self) -> &mut (dyn FilesGroup + 'static);
 }
 
+// impl Upcast<&dyn FilesGroup + ?Sized> for &dyn FilesGroup {
+//     fn upcast(&self) -> &(dyn FilesGroup + 'static) {
+//         *self
+//     }
+// }
+// impl<T: FilesGroup + ?Sized> Upcast<(dyn FilesGroup + 'static)> for &T {
+//     fn upcast(&self) -> &(dyn FilesGroup + 'static) {
+//         todo!()
+//     }
+// }
+
 fn crates(db: &dyn FilesGroup) -> Vec<CrateId> {
     // TODO(spapini): Sort for stability.
     db.crate_configs().keys().copied().collect()
 }
 fn crate_config(db: &dyn FilesGroup, crt: CrateId) -> Option<CrateConfiguration> {
-    match db.lookup_intern_crate(crt) {
+    match crt.lookup_intern(db) {
         CrateLongId::Real(_) => db.crate_configs().get(&crt).cloned(),
         CrateLongId::Virtual { name: _, config } => Some(config),
     }
 }
 
 fn priv_raw_file_content(db: &dyn FilesGroup, file: FileId) -> Option<Arc<String>> {
-    match db.lookup_intern_file(file) {
+    match file.lookup_intern(db) {
         FileLongId::OnDisk(path) => match fs::read_to_string(path) {
             Ok(content) => Some(Arc::new(content)),
             Err(_) => None,
@@ -265,7 +277,7 @@ pub fn get_originating_location(
     mut span: TextSpan,
 ) -> (FileId, TextSpan) {
     while let FileLongId::Virtual(VirtualFile { parent: Some(parent), code_mappings, .. }) =
-        db.lookup_intern_file(file_id)
+        file_id.lookup_intern(db)
     {
         if let Some(origin) = code_mappings.iter().find_map(|mapping| mapping.translate(span)) {
             span = origin;

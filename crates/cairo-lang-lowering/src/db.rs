@@ -548,7 +548,7 @@ fn extract_coupon_function(
     concrete: ids::FunctionId,
 ) -> Maybe<Option<ids::ConcreteFunctionWithBodyId>> {
     // Check that the function is a semantic function.
-    let ids::FunctionLongId::Semantic(function_id) = concrete.lookup(db) else {
+    let ids::FunctionLongId::Semantic(function_id) = concrete.lookup_intern(db) else {
         return Ok(None);
     };
 
@@ -560,7 +560,7 @@ fn extract_coupon_function(
     else {
         return Ok(None);
     };
-    let name = db.lookup_intern_extern_function(extern_function_id).name(db.upcast());
+    let name = extern_function_id.lookup_intern(db).name(db.upcast());
     if !(name == "coupon_buy" || name == "coupon_refund") {
         return Ok(None);
     }
@@ -569,7 +569,7 @@ fn extract_coupon_function(
     let [semantic::GenericArgumentId::Type(type_id)] = concrete_function.generic_args[..] else {
         panic!("Unexpected generic_args for coupon_buy().");
     };
-    let semantic::TypeLongId::Coupon(coupon_function) = db.lookup_intern_type(type_id) else {
+    let semantic::TypeLongId::Coupon(coupon_function) = type_id.lookup_intern(db) else {
         panic!("Unexpected generic_args for coupon_buy().");
     };
 
@@ -714,7 +714,7 @@ fn file_lowering_diagnostics(
 }
 
 fn type_size(db: &dyn LoweringGroup, ty: TypeId) -> usize {
-    match db.lookup_intern_type(ty) {
+    match ty.lookup_intern(db) {
         TypeLongId::Concrete(concrete_type_id) => match concrete_type_id {
             ConcreteTypeId::Struct(struct_id) => db
                 .concrete_struct_members(struct_id)

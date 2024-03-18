@@ -35,6 +35,7 @@ use itertools::{chain, zip_eq};
 use num_bigint::BigInt;
 use num_traits::ToPrimitive;
 use smol_str::SmolStr;
+use utils::LookupInternUpcast;
 
 use super::inference::canonic::ResultNoErrEx;
 use super::inference::conform::InferenceConform;
@@ -2664,7 +2665,7 @@ pub fn compute_statement_semantic(
                 ctx.diagnostics.report_after(&expr_syntax, MissingSemicolon);
             }
             let ty: TypeId = expr.ty();
-            if let TypeLongId::Concrete(concrete) = db.lookup_intern_type(ty) {
+            if let TypeLongId::Concrete(concrete) = ty.lookup_intern(db) {
                 if concrete.is_must_use(db)? {
                     ctx.diagnostics.report(&expr_syntax, UnhandledMustUseType { ty });
                 }

@@ -7,7 +7,7 @@ use std::ops::Deref;
 use std::sync::Arc;
 
 use cairo_lang_filesystem::span::TextWidth;
-use cairo_lang_utils::extract_matches;
+use cairo_lang_utils::{extract_matches, LookupInternUpcast};
 use smol_str::SmolStr;
 
 use super::element_list::ElementList;
@@ -669,7 +669,7 @@ impl Arg {
         arg_clause: ArgClauseGreen,
     ) -> ArgGreen {
         let children: Vec<GreenId> = vec![modifiers.0, arg_clause.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         ArgGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::Arg,
             details: GreenNodeDetails::Node { children, width },
@@ -836,7 +836,7 @@ impl ArgClauseNamed {
         value: ExprGreen,
     ) -> ArgClauseNamedGreen {
         let children: Vec<GreenId> = vec![name.0, colon.0, value.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         ArgClauseNamedGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::ArgClauseNamed,
             details: GreenNodeDetails::Node { children, width },
@@ -911,7 +911,7 @@ impl ArgClauseUnnamed {
     pub const INDEX_VALUE: usize = 0;
     pub fn new_green(db: &dyn SyntaxGroup, value: ExprGreen) -> ArgClauseUnnamedGreen {
         let children: Vec<GreenId> = vec![value.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         ArgClauseUnnamedGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::ArgClauseUnnamed,
             details: GreenNodeDetails::Node { children, width },
@@ -981,7 +981,7 @@ impl ArgClauseFieldInitShorthand {
         name: ExprFieldInitShorthandGreen,
     ) -> ArgClauseFieldInitShorthandGreen {
         let children: Vec<GreenId> = vec![colon.0, name.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         ArgClauseFieldInitShorthandGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::ArgClauseFieldInitShorthand,
             details: GreenNodeDetails::Node { children, width },
@@ -1052,7 +1052,7 @@ impl ExprFieldInitShorthand {
         name: TerminalIdentifierGreen,
     ) -> ExprFieldInitShorthandGreen {
         let children: Vec<GreenId> = vec![name.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         ExprFieldInitShorthandGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::ExprFieldInitShorthand,
             details: GreenNodeDetails::Node { children, width },
@@ -1194,7 +1194,7 @@ pub struct ExprMissing {
 impl ExprMissing {
     pub fn new_green(db: &dyn SyntaxGroup) -> ExprMissingGreen {
         let children: Vec<GreenId> = vec![];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         ExprMissingGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::ExprMissing,
             details: GreenNodeDetails::Node { children, width },
@@ -1331,7 +1331,7 @@ impl PathSegmentSimple {
         ident: TerminalIdentifierGreen,
     ) -> PathSegmentSimpleGreen {
         let children: Vec<GreenId> = vec![ident.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         PathSegmentSimpleGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::PathSegmentSimple,
             details: GreenNodeDetails::Node { children, width },
@@ -1474,7 +1474,7 @@ pub struct OptionTerminalColonColonEmpty {
 impl OptionTerminalColonColonEmpty {
     pub fn new_green(db: &dyn SyntaxGroup) -> OptionTerminalColonColonEmptyGreen {
         let children: Vec<GreenId> = vec![];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         OptionTerminalColonColonEmptyGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::OptionTerminalColonColonEmpty,
             details: GreenNodeDetails::Node { children, width },
@@ -1539,7 +1539,7 @@ impl PathSegmentWithGenericArgs {
         generic_args: GenericArgsGreen,
     ) -> PathSegmentWithGenericArgsGreen {
         let children: Vec<GreenId> = vec![ident.0, separator.0, generic_args.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         PathSegmentWithGenericArgsGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::PathSegmentWithGenericArgs,
             details: GreenNodeDetails::Node { children, width },
@@ -1699,7 +1699,7 @@ impl ExprParenthesized {
         rparen: TerminalRParenGreen,
     ) -> ExprParenthesizedGreen {
         let children: Vec<GreenId> = vec![lparen.0, expr.0, rparen.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         ExprParenthesizedGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::ExprParenthesized,
             details: GreenNodeDetails::Node { children, width },
@@ -1779,7 +1779,7 @@ impl ExprUnary {
         expr: ExprGreen,
     ) -> ExprUnaryGreen {
         let children: Vec<GreenId> = vec![op.0, expr.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         ExprUnaryGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::ExprUnary,
             details: GreenNodeDetails::Node { children, width },
@@ -1974,7 +1974,7 @@ impl ExprBinary {
         rhs: ExprGreen,
     ) -> ExprBinaryGreen {
         let children: Vec<GreenId> = vec![lhs.0, op.0, rhs.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         ExprBinaryGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::ExprBinary,
             details: GreenNodeDetails::Node { children, width },
@@ -2458,7 +2458,7 @@ impl ExprListParenthesized {
         rparen: TerminalRParenGreen,
     ) -> ExprListParenthesizedGreen {
         let children: Vec<GreenId> = vec![lparen.0, expressions.0, rparen.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         ExprListParenthesizedGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::ExprListParenthesized,
             details: GreenNodeDetails::Node { children, width },
@@ -2538,7 +2538,7 @@ impl ExprFunctionCall {
         arguments: ArgListParenthesizedGreen,
     ) -> ExprFunctionCallGreen {
         let children: Vec<GreenId> = vec![path.0, arguments.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         ExprFunctionCallGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::ExprFunctionCall,
             details: GreenNodeDetails::Node { children, width },
@@ -2613,7 +2613,7 @@ impl ArgListParenthesized {
         rparen: TerminalRParenGreen,
     ) -> ArgListParenthesizedGreen {
         let children: Vec<GreenId> = vec![lparen.0, arguments.0, rparen.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         ArgListParenthesizedGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::ArgListParenthesized,
             details: GreenNodeDetails::Node { children, width },
@@ -2766,7 +2766,7 @@ pub struct OptionArgListParenthesizedEmpty {
 impl OptionArgListParenthesizedEmpty {
     pub fn new_green(db: &dyn SyntaxGroup) -> OptionArgListParenthesizedEmptyGreen {
         let children: Vec<GreenId> = vec![];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         OptionArgListParenthesizedEmptyGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::OptionArgListParenthesizedEmpty,
             details: GreenNodeDetails::Node { children, width },
@@ -2829,7 +2829,7 @@ impl ExprStructCtorCall {
         arguments: StructArgListBracedGreen,
     ) -> ExprStructCtorCallGreen {
         let children: Vec<GreenId> = vec![path.0, arguments.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         ExprStructCtorCallGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::ExprStructCtorCall,
             details: GreenNodeDetails::Node { children, width },
@@ -2904,7 +2904,7 @@ impl StructArgListBraced {
         rbrace: TerminalRBraceGreen,
     ) -> StructArgListBracedGreen {
         let children: Vec<GreenId> = vec![lbrace.0, arguments.0, rbrace.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         StructArgListBracedGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::StructArgListBraced,
             details: GreenNodeDetails::Node { children, width },
@@ -2986,7 +2986,7 @@ impl ExprBlock {
         rbrace: TerminalRBraceGreen,
     ) -> ExprBlockGreen {
         let children: Vec<GreenId> = vec![lbrace.0, statements.0, rbrace.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         ExprBlockGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::ExprBlock,
             details: GreenNodeDetails::Node { children, width },
@@ -3072,7 +3072,7 @@ impl ExprMatch {
         rbrace: TerminalRBraceGreen,
     ) -> ExprMatchGreen {
         let children: Vec<GreenId> = vec![match_kw.0, expr.0, lbrace.0, arms.0, rbrace.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         ExprMatchGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::ExprMatch,
             details: GreenNodeDetails::Node { children, width },
@@ -3240,7 +3240,7 @@ impl MatchArm {
         expression: ExprGreen,
     ) -> MatchArmGreen {
         let children: Vec<GreenId> = vec![patterns.0, arrow.0, expression.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         MatchArmGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::MatchArm,
             details: GreenNodeDetails::Node { children, width },
@@ -3324,7 +3324,7 @@ impl ExprIf {
         else_clause: OptionElseClauseGreen,
     ) -> ExprIfGreen {
         let children: Vec<GreenId> = vec![if_kw.0, condition.0, if_block.0, else_clause.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         ExprIfGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::ExprIf,
             details: GreenNodeDetails::Node { children, width },
@@ -3484,7 +3484,7 @@ impl ConditionLet {
         expr: ExprGreen,
     ) -> ConditionLetGreen {
         let children: Vec<GreenId> = vec![let_kw.0, patterns.0, eq.0, expr.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         ConditionLetGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::ConditionLet,
             details: GreenNodeDetails::Node { children, width },
@@ -3563,7 +3563,7 @@ impl ConditionExpr {
     pub const INDEX_EXPR: usize = 0;
     pub fn new_green(db: &dyn SyntaxGroup, expr: ExprGreen) -> ConditionExprGreen {
         let children: Vec<GreenId> = vec![expr.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         ConditionExprGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::ConditionExpr,
             details: GreenNodeDetails::Node { children, width },
@@ -3705,7 +3705,7 @@ impl ExprLoop {
         body: ExprBlockGreen,
     ) -> ExprLoopGreen {
         let children: Vec<GreenId> = vec![loop_kw.0, body.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         ExprLoopGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::ExprLoop,
             details: GreenNodeDetails::Node { children, width },
@@ -3780,7 +3780,7 @@ impl ExprWhile {
         body: ExprBlockGreen,
     ) -> ExprWhileGreen {
         let children: Vec<GreenId> = vec![while_kw.0, condition.0, body.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         ExprWhileGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::ExprWhile,
             details: GreenNodeDetails::Node { children, width },
@@ -3860,7 +3860,7 @@ impl ElseClause {
         else_block_or_if: BlockOrIfGreen,
     ) -> ElseClauseGreen {
         let children: Vec<GreenId> = vec![else_kw.0, else_block_or_if.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         ElseClauseGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::ElseClause,
             details: GreenNodeDetails::Node { children, width },
@@ -4006,7 +4006,7 @@ pub struct OptionElseClauseEmpty {
 impl OptionElseClauseEmpty {
     pub fn new_green(db: &dyn SyntaxGroup) -> OptionElseClauseEmptyGreen {
         let children: Vec<GreenId> = vec![];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         OptionElseClauseEmptyGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::OptionElseClauseEmpty,
             details: GreenNodeDetails::Node { children, width },
@@ -4069,7 +4069,7 @@ impl ExprErrorPropagate {
         op: TerminalQuestionMarkGreen,
     ) -> ExprErrorPropagateGreen {
         let children: Vec<GreenId> = vec![expr.0, op.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         ExprErrorPropagateGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::ExprErrorPropagate,
             details: GreenNodeDetails::Node { children, width },
@@ -4146,7 +4146,7 @@ impl ExprIndexed {
         rbrack: TerminalRBrackGreen,
     ) -> ExprIndexedGreen {
         let children: Vec<GreenId> = vec![expr.0, lbrack.0, index_expr.0, rbrack.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         ExprIndexedGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::ExprIndexed,
             details: GreenNodeDetails::Node { children, width },
@@ -4232,7 +4232,7 @@ impl ExprInlineMacro {
         arguments: WrappedArgListGreen,
     ) -> ExprInlineMacroGreen {
         let children: Vec<GreenId> = vec![path.0, bang.0, arguments.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         ExprInlineMacroGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::ExprInlineMacro,
             details: GreenNodeDetails::Node { children, width },
@@ -4316,7 +4316,7 @@ impl ExprFixedSizeArray {
         rbrack: TerminalRBrackGreen,
     ) -> ExprFixedSizeArrayGreen {
         let children: Vec<GreenId> = vec![lbrack.0, exprs.0, size.0, rbrack.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         ExprFixedSizeArrayGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::ExprFixedSizeArray,
             details: GreenNodeDetails::Node { children, width },
@@ -4400,7 +4400,7 @@ impl FixedSizeArraySize {
         size: ExprGreen,
     ) -> FixedSizeArraySizeGreen {
         let children: Vec<GreenId> = vec![semicolon.0, size.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         FixedSizeArraySizeGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::FixedSizeArraySize,
             details: GreenNodeDetails::Node { children, width },
@@ -4546,7 +4546,7 @@ pub struct OptionFixedSizeArraySizeEmpty {
 impl OptionFixedSizeArraySizeEmpty {
     pub fn new_green(db: &dyn SyntaxGroup) -> OptionFixedSizeArraySizeEmptyGreen {
         let children: Vec<GreenId> = vec![];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         OptionFixedSizeArraySizeEmptyGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::OptionFixedSizeArraySizeEmpty,
             details: GreenNodeDetails::Node { children, width },
@@ -4609,7 +4609,7 @@ impl StructArgExpr {
         expr: ExprGreen,
     ) -> StructArgExprGreen {
         let children: Vec<GreenId> = vec![colon.0, expr.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         StructArgExprGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::StructArgExpr,
             details: GreenNodeDetails::Node { children, width },
@@ -4755,7 +4755,7 @@ pub struct OptionStructArgExprEmpty {
 impl OptionStructArgExprEmpty {
     pub fn new_green(db: &dyn SyntaxGroup) -> OptionStructArgExprEmptyGreen {
         let children: Vec<GreenId> = vec![];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         OptionStructArgExprEmptyGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::OptionStructArgExprEmpty,
             details: GreenNodeDetails::Node { children, width },
@@ -4818,7 +4818,7 @@ impl StructArgSingle {
         arg_expr: OptionStructArgExprGreen,
     ) -> StructArgSingleGreen {
         let children: Vec<GreenId> = vec![identifier.0, arg_expr.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         StructArgSingleGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::StructArgSingle,
             details: GreenNodeDetails::Node { children, width },
@@ -4902,7 +4902,7 @@ impl StructArgTail {
         expression: ExprGreen,
     ) -> StructArgTailGreen {
         let children: Vec<GreenId> = vec![dotdot.0, expression.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         StructArgTailGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::StructArgTail,
             details: GreenNodeDetails::Node { children, width },
@@ -5131,7 +5131,7 @@ impl ArgListBraced {
         rbrace: TerminalRBraceGreen,
     ) -> ArgListBracedGreen {
         let children: Vec<GreenId> = vec![lbrace.0, arguments.0, rbrace.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         ArgListBracedGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::ArgListBraced,
             details: GreenNodeDetails::Node { children, width },
@@ -5213,7 +5213,7 @@ impl ArgListBracketed {
         rbrack: TerminalRBrackGreen,
     ) -> ArgListBracketedGreen {
         let children: Vec<GreenId> = vec![lbrack.0, arguments.0, rbrack.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         ArgListBracketedGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::ArgListBracketed,
             details: GreenNodeDetails::Node { children, width },
@@ -5397,7 +5397,7 @@ pub struct WrappedArgListMissing {
 impl WrappedArgListMissing {
     pub fn new_green(db: &dyn SyntaxGroup) -> WrappedArgListMissingGreen {
         let children: Vec<GreenId> = vec![];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         WrappedArgListMissingGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::WrappedArgListMissing,
             details: GreenNodeDetails::Node { children, width },
@@ -5684,7 +5684,7 @@ impl PatternIdentifier {
         name: TerminalIdentifierGreen,
     ) -> PatternIdentifierGreen {
         let children: Vec<GreenId> = vec![modifiers.0, name.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         PatternIdentifierGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::PatternIdentifier,
             details: GreenNodeDetails::Node { children, width },
@@ -5769,7 +5769,7 @@ impl PatternStruct {
         rbrace: TerminalRBraceGreen,
     ) -> PatternStructGreen {
         let children: Vec<GreenId> = vec![path.0, lbrace.0, params.0, rbrace.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         PatternStructGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::PatternStruct,
             details: GreenNodeDetails::Node { children, width },
@@ -5933,7 +5933,7 @@ impl PatternTuple {
         rparen: TerminalRParenGreen,
     ) -> PatternTupleGreen {
         let children: Vec<GreenId> = vec![lparen.0, patterns.0, rparen.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         PatternTupleGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::PatternTuple,
             details: GreenNodeDetails::Node { children, width },
@@ -6015,7 +6015,7 @@ impl PatternFixedSizeArray {
         rbrack: TerminalRBrackGreen,
     ) -> PatternFixedSizeArrayGreen {
         let children: Vec<GreenId> = vec![lbrack.0, patterns.0, rbrack.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         PatternFixedSizeArrayGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::PatternFixedSizeArray,
             details: GreenNodeDetails::Node { children, width },
@@ -6350,7 +6350,7 @@ impl PatternStructParamWithExpr {
         pattern: PatternGreen,
     ) -> PatternStructParamWithExprGreen {
         let children: Vec<GreenId> = vec![modifiers.0, name.0, colon.0, pattern.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         PatternStructParamWithExprGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::PatternStructParamWithExpr,
             details: GreenNodeDetails::Node { children, width },
@@ -6434,7 +6434,7 @@ impl PatternEnum {
         pattern: OptionPatternEnumInnerPatternGreen,
     ) -> PatternEnumGreen {
         let children: Vec<GreenId> = vec![path.0, pattern.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         PatternEnumGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::PatternEnum,
             details: GreenNodeDetails::Node { children, width },
@@ -6512,7 +6512,7 @@ impl PatternEnumInnerPattern {
         rparen: TerminalRParenGreen,
     ) -> PatternEnumInnerPatternGreen {
         let children: Vec<GreenId> = vec![lparen.0, pattern.0, rparen.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         PatternEnumInnerPatternGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::PatternEnumInnerPattern,
             details: GreenNodeDetails::Node { children, width },
@@ -6667,7 +6667,7 @@ pub struct OptionPatternEnumInnerPatternEmpty {
 impl OptionPatternEnumInnerPatternEmpty {
     pub fn new_green(db: &dyn SyntaxGroup) -> OptionPatternEnumInnerPatternEmptyGreen {
         let children: Vec<GreenId> = vec![];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         OptionPatternEnumInnerPatternEmptyGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::OptionPatternEnumInnerPatternEmpty,
             details: GreenNodeDetails::Node { children, width },
@@ -6730,7 +6730,7 @@ impl TypeClause {
         ty: ExprGreen,
     ) -> TypeClauseGreen {
         let children: Vec<GreenId> = vec![colon.0, ty.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         TypeClauseGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::TypeClause,
             details: GreenNodeDetails::Node { children, width },
@@ -6876,7 +6876,7 @@ pub struct OptionTypeClauseEmpty {
 impl OptionTypeClauseEmpty {
     pub fn new_green(db: &dyn SyntaxGroup) -> OptionTypeClauseEmptyGreen {
         let children: Vec<GreenId> = vec![];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         OptionTypeClauseEmptyGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::OptionTypeClauseEmpty,
             details: GreenNodeDetails::Node { children, width },
@@ -6939,7 +6939,7 @@ impl ReturnTypeClause {
         ty: ExprGreen,
     ) -> ReturnTypeClauseGreen {
         let children: Vec<GreenId> = vec![arrow.0, ty.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         ReturnTypeClauseGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::ReturnTypeClause,
             details: GreenNodeDetails::Node { children, width },
@@ -7085,7 +7085,7 @@ pub struct OptionReturnTypeClauseEmpty {
 impl OptionReturnTypeClauseEmpty {
     pub fn new_green(db: &dyn SyntaxGroup) -> OptionReturnTypeClauseEmptyGreen {
         let children: Vec<GreenId> = vec![];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         OptionReturnTypeClauseEmptyGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::OptionReturnTypeClauseEmpty,
             details: GreenNodeDetails::Node { children, width },
@@ -7330,7 +7330,7 @@ pub struct StatementMissing {
 impl StatementMissing {
     pub fn new_green(db: &dyn SyntaxGroup) -> StatementMissingGreen {
         let children: Vec<GreenId> = vec![];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         StatementMissingGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::StatementMissing,
             details: GreenNodeDetails::Node { children, width },
@@ -7404,7 +7404,7 @@ impl StatementLet {
     ) -> StatementLetGreen {
         let children: Vec<GreenId> =
             vec![attributes.0, let_kw.0, pattern.0, type_clause.0, eq.0, rhs.0, semicolon.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         StatementLetGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::StatementLet,
             details: GreenNodeDetails::Node { children, width },
@@ -7581,7 +7581,7 @@ pub struct OptionTerminalSemicolonEmpty {
 impl OptionTerminalSemicolonEmpty {
     pub fn new_green(db: &dyn SyntaxGroup) -> OptionTerminalSemicolonEmptyGreen {
         let children: Vec<GreenId> = vec![];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         OptionTerminalSemicolonEmptyGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::OptionTerminalSemicolonEmpty,
             details: GreenNodeDetails::Node { children, width },
@@ -7646,7 +7646,7 @@ impl StatementExpr {
         semicolon: OptionTerminalSemicolonGreen,
     ) -> StatementExprGreen {
         let children: Vec<GreenId> = vec![attributes.0, expr.0, semicolon.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         StatementExprGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::StatementExpr,
             details: GreenNodeDetails::Node { children, width },
@@ -7728,7 +7728,7 @@ impl StatementContinue {
         semicolon: TerminalSemicolonGreen,
     ) -> StatementContinueGreen {
         let children: Vec<GreenId> = vec![attributes.0, continue_kw.0, semicolon.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         StatementContinueGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::StatementContinue,
             details: GreenNodeDetails::Node { children, width },
@@ -7803,7 +7803,7 @@ impl ExprClause {
     pub const INDEX_EXPR: usize = 0;
     pub fn new_green(db: &dyn SyntaxGroup, expr: ExprGreen) -> ExprClauseGreen {
         let children: Vec<GreenId> = vec![expr.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         ExprClauseGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::ExprClause,
             details: GreenNodeDetails::Node { children, width },
@@ -7946,7 +7946,7 @@ pub struct OptionExprClauseEmpty {
 impl OptionExprClauseEmpty {
     pub fn new_green(db: &dyn SyntaxGroup) -> OptionExprClauseEmptyGreen {
         let children: Vec<GreenId> = vec![];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         OptionExprClauseEmptyGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::OptionExprClauseEmpty,
             details: GreenNodeDetails::Node { children, width },
@@ -8013,7 +8013,7 @@ impl StatementReturn {
         semicolon: TerminalSemicolonGreen,
     ) -> StatementReturnGreen {
         let children: Vec<GreenId> = vec![attributes.0, return_kw.0, expr_clause.0, semicolon.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         StatementReturnGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::StatementReturn,
             details: GreenNodeDetails::Node { children, width },
@@ -8101,7 +8101,7 @@ impl StatementBreak {
         semicolon: TerminalSemicolonGreen,
     ) -> StatementBreakGreen {
         let children: Vec<GreenId> = vec![attributes.0, break_kw.0, expr_clause.0, semicolon.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         StatementBreakGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::StatementBreak,
             details: GreenNodeDetails::Node { children, width },
@@ -8187,7 +8187,7 @@ impl Param {
         type_clause: TypeClauseGreen,
     ) -> ParamGreen {
         let children: Vec<GreenId> = vec![modifiers.0, name.0, type_clause.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         ParamGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::Param,
             details: GreenNodeDetails::Node { children, width },
@@ -8481,7 +8481,7 @@ impl ImplicitsClause {
         rparen: TerminalRParenGreen,
     ) -> ImplicitsClauseGreen {
         let children: Vec<GreenId> = vec![implicits_kw.0, lparen.0, implicits.0, rparen.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         ImplicitsClauseGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::ImplicitsClause,
             details: GreenNodeDetails::Node { children, width },
@@ -8716,7 +8716,7 @@ pub struct OptionImplicitsClauseEmpty {
 impl OptionImplicitsClauseEmpty {
     pub fn new_green(db: &dyn SyntaxGroup) -> OptionImplicitsClauseEmptyGreen {
         let children: Vec<GreenId> = vec![];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         OptionImplicitsClauseEmptyGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::OptionImplicitsClauseEmpty,
             details: GreenNodeDetails::Node { children, width },
@@ -8852,7 +8852,7 @@ pub struct OptionTerminalNoPanicEmpty {
 impl OptionTerminalNoPanicEmpty {
     pub fn new_green(db: &dyn SyntaxGroup) -> OptionTerminalNoPanicEmptyGreen {
         let children: Vec<GreenId> = vec![];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         OptionTerminalNoPanicEmptyGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::OptionTerminalNoPanicEmpty,
             details: GreenNodeDetails::Node { children, width },
@@ -8930,7 +8930,7 @@ impl FunctionSignature {
             implicits_clause.0,
             optional_no_panic.0,
         ];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         FunctionSignatureGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::FunctionSignature,
             details: GreenNodeDetails::Node { children, width },
@@ -9026,7 +9026,7 @@ impl Member {
         type_clause: TypeClauseGreen,
     ) -> MemberGreen {
         let children: Vec<GreenId> = vec![attributes.0, visibility.0, name.0, type_clause.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         MemberGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::Member,
             details: GreenNodeDetails::Node { children, width },
@@ -9198,7 +9198,7 @@ impl Variant {
         type_clause: OptionTypeClauseGreen,
     ) -> VariantGreen {
         let children: Vec<GreenId> = vec![attributes.0, name.0, type_clause.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         VariantGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::Variant,
             details: GreenNodeDetails::Node { children, width },
@@ -9666,7 +9666,7 @@ pub struct ModuleItemMissing {
 impl ModuleItemMissing {
     pub fn new_green(db: &dyn SyntaxGroup) -> ModuleItemMissingGreen {
         let children: Vec<GreenId> = vec![];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         ModuleItemMissingGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::ModuleItemMissing,
             details: GreenNodeDetails::Node { children, width },
@@ -9735,7 +9735,7 @@ impl Attribute {
         rbrack: TerminalRBrackGreen,
     ) -> AttributeGreen {
         let children: Vec<GreenId> = vec![hash.0, lbrack.0, attr.0, arguments.0, rbrack.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         AttributeGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::Attribute,
             details: GreenNodeDetails::Node { children, width },
@@ -9869,7 +9869,7 @@ pub struct VisibilityDefault {
 impl VisibilityDefault {
     pub fn new_green(db: &dyn SyntaxGroup) -> VisibilityDefaultGreen {
         let children: Vec<GreenId> = vec![];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         VisibilityDefaultGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::VisibilityDefault,
             details: GreenNodeDetails::Node { children, width },
@@ -9934,7 +9934,7 @@ impl VisibilityPubArgumentClause {
         rparen: TerminalRParenGreen,
     ) -> VisibilityPubArgumentClauseGreen {
         let children: Vec<GreenId> = vec![lparen.0, argument.0, rparen.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         VisibilityPubArgumentClauseGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::VisibilityPubArgumentClause,
             details: GreenNodeDetails::Node { children, width },
@@ -10091,7 +10091,7 @@ pub struct OptionVisibilityPubArgumentClauseEmpty {
 impl OptionVisibilityPubArgumentClauseEmpty {
     pub fn new_green(db: &dyn SyntaxGroup) -> OptionVisibilityPubArgumentClauseEmptyGreen {
         let children: Vec<GreenId> = vec![];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         OptionVisibilityPubArgumentClauseEmptyGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::OptionVisibilityPubArgumentClauseEmpty,
             details: GreenNodeDetails::Node { children, width },
@@ -10155,7 +10155,7 @@ impl VisibilityPub {
         argument_clause: OptionVisibilityPubArgumentClauseGreen,
     ) -> VisibilityPubGreen {
         let children: Vec<GreenId> = vec![pub_kw.0, argument_clause.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         VisibilityPubGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::VisibilityPub,
             details: GreenNodeDetails::Node { children, width },
@@ -10311,7 +10311,7 @@ impl ItemModule {
         body: MaybeModuleBodyGreen,
     ) -> ItemModuleGreen {
         let children: Vec<GreenId> = vec![attributes.0, visibility.0, module_kw.0, name.0, body.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         ItemModuleGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::ItemModule,
             details: GreenNodeDetails::Node { children, width },
@@ -10485,7 +10485,7 @@ impl ModuleBody {
         rbrace: TerminalRBraceGreen,
     ) -> ModuleBodyGreen {
         let children: Vec<GreenId> = vec![lbrace.0, items.0, rbrace.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         ModuleBodyGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::ModuleBody,
             details: GreenNodeDetails::Node { children, width },
@@ -10569,7 +10569,7 @@ impl FunctionDeclaration {
         signature: FunctionSignatureGreen,
     ) -> FunctionDeclarationGreen {
         let children: Vec<GreenId> = vec![function_kw.0, name.0, generic_params.0, signature.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         FunctionDeclarationGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::FunctionDeclaration,
             details: GreenNodeDetails::Node { children, width },
@@ -10682,7 +10682,7 @@ impl ItemConstant {
             value.0,
             semicolon.0,
         ];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         ItemConstantGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::ItemConstant,
             details: GreenNodeDetails::Node { children, width },
@@ -10794,7 +10794,7 @@ impl FunctionWithBody {
         body: ExprBlockGreen,
     ) -> FunctionWithBodyGreen {
         let children: Vec<GreenId> = vec![attributes.0, visibility.0, declaration.0, body.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         FunctionWithBodyGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::FunctionWithBody,
             details: GreenNodeDetails::Node { children, width },
@@ -10893,7 +10893,7 @@ impl ItemExternFunction {
     ) -> ItemExternFunctionGreen {
         let children: Vec<GreenId> =
             vec![attributes.0, visibility.0, extern_kw.0, declaration.0, semicolon.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         ItemExternFunctionGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::ItemExternFunction,
             details: GreenNodeDetails::Node { children, width },
@@ -11007,7 +11007,7 @@ impl ItemExternType {
             generic_params.0,
             semicolon.0,
         ];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         ItemExternTypeGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::ItemExternType,
             details: GreenNodeDetails::Node { children, width },
@@ -11120,7 +11120,7 @@ impl ItemTrait {
     ) -> ItemTraitGreen {
         let children: Vec<GreenId> =
             vec![attributes.0, visibility.0, trait_kw.0, name.0, generic_params.0, body.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         ItemTraitGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::ItemTrait,
             details: GreenNodeDetails::Node { children, width },
@@ -11298,7 +11298,7 @@ impl TraitBody {
         rbrace: TerminalRBraceGreen,
     ) -> TraitBodyGreen {
         let children: Vec<GreenId> = vec![lbrace.0, items.0, rbrace.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         TraitBodyGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::TraitBody,
             details: GreenNodeDetails::Node { children, width },
@@ -11544,7 +11544,7 @@ pub struct TraitItemMissing {
 impl TraitItemMissing {
     pub fn new_green(db: &dyn SyntaxGroup) -> TraitItemMissingGreen {
         let children: Vec<GreenId> = vec![];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         TraitItemMissingGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::TraitItemMissing,
             details: GreenNodeDetails::Node { children, width },
@@ -11609,7 +11609,7 @@ impl TraitItemFunction {
         body: MaybeTraitFunctionBodyGreen,
     ) -> TraitItemFunctionGreen {
         let children: Vec<GreenId> = vec![attributes.0, declaration.0, body.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         TraitItemFunctionGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::TraitItemFunction,
             details: GreenNodeDetails::Node { children, width },
@@ -11704,7 +11704,7 @@ impl TraitItemType {
     ) -> TraitItemTypeGreen {
         let children: Vec<GreenId> =
             vec![attributes.0, type_kw.0, name.0, generic_params.0, semicolon.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         TraitItemTypeGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::TraitItemType,
             details: GreenNodeDetails::Node { children, width },
@@ -11807,7 +11807,7 @@ impl TraitItemConstant {
     ) -> TraitItemConstantGreen {
         let children: Vec<GreenId> =
             vec![attributes.0, const_kw.0, name.0, type_clause.0, semicolon.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         TraitItemConstantGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::TraitItemConstant,
             details: GreenNodeDetails::Node { children, width },
@@ -11912,7 +11912,7 @@ impl TraitItemImpl {
     ) -> TraitItemImplGreen {
         let children: Vec<GreenId> =
             vec![attributes.0, impl_kw.0, name.0, of_kw.0, trait_path.0, semicolon.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         TraitItemImplGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::TraitItemImpl,
             details: GreenNodeDetails::Node { children, width },
@@ -12112,7 +12112,7 @@ impl ItemImpl {
             trait_path.0,
             body.0,
         ];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         ItemImplGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::ItemImpl,
             details: GreenNodeDetails::Node { children, width },
@@ -12226,7 +12226,7 @@ impl ItemInlineMacro {
         semicolon: TerminalSemicolonGreen,
     ) -> ItemInlineMacroGreen {
         let children: Vec<GreenId> = vec![attributes.0, name.0, bang.0, arguments.0, semicolon.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         ItemInlineMacroGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::ItemInlineMacro,
             details: GreenNodeDetails::Node { children, width },
@@ -12390,7 +12390,7 @@ impl ImplBody {
         rbrace: TerminalRBraceGreen,
     ) -> ImplBodyGreen {
         let children: Vec<GreenId> = vec![lbrace.0, items.0, rbrace.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         ImplBodyGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::ImplBody,
             details: GreenNodeDetails::Node { children, width },
@@ -12738,7 +12738,7 @@ pub struct ImplItemMissing {
 impl ImplItemMissing {
     pub fn new_green(db: &dyn SyntaxGroup) -> ImplItemMissingGreen {
         let children: Vec<GreenId> = vec![];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         ImplItemMissingGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::ImplItemMissing,
             details: GreenNodeDetails::Node { children, width },
@@ -12822,7 +12822,7 @@ impl ItemImplAlias {
             impl_path.0,
             semicolon.0,
         ];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         ItemImplAliasGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::ItemImplAlias,
             details: GreenNodeDetails::Node { children, width },
@@ -12951,7 +12951,7 @@ impl ItemStruct {
             members.0,
             rbrace.0,
         ];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         ItemStructGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::ItemStruct,
             details: GreenNodeDetails::Node { children, width },
@@ -13080,7 +13080,7 @@ impl ItemEnum {
             variants.0,
             rbrace.0,
         ];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         ItemEnumGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::ItemEnum,
             details: GreenNodeDetails::Node { children, width },
@@ -13209,7 +13209,7 @@ impl ItemTypeAlias {
             ty.0,
             semicolon.0,
         ];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         ItemTypeAliasGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::ItemTypeAlias,
             details: GreenNodeDetails::Node { children, width },
@@ -13324,7 +13324,7 @@ impl ItemUse {
     ) -> ItemUseGreen {
         let children: Vec<GreenId> =
             vec![attributes.0, visibility.0, use_kw.0, use_path.0, semicolon.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         ItemUseGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::ItemUse,
             details: GreenNodeDetails::Node { children, width },
@@ -13506,7 +13506,7 @@ impl UsePathLeaf {
         alias_clause: OptionAliasClauseGreen,
     ) -> UsePathLeafGreen {
         let children: Vec<GreenId> = vec![ident.0, alias_clause.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         UsePathLeafGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::UsePathLeaf,
             details: GreenNodeDetails::Node { children, width },
@@ -13597,7 +13597,7 @@ impl UsePathSingle {
         use_path: UsePathGreen,
     ) -> UsePathSingleGreen {
         let children: Vec<GreenId> = vec![ident.0, colon_colon.0, use_path.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         UsePathSingleGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::UsePathSingle,
             details: GreenNodeDetails::Node { children, width },
@@ -13679,7 +13679,7 @@ impl UsePathMulti {
         rbrace: TerminalRBraceGreen,
     ) -> UsePathMultiGreen {
         let children: Vec<GreenId> = vec![lbrace.0, use_paths.0, rbrace.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         UsePathMultiGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::UsePathMulti,
             details: GreenNodeDetails::Node { children, width },
@@ -13837,7 +13837,7 @@ impl AliasClause {
         alias: TerminalIdentifierGreen,
     ) -> AliasClauseGreen {
         let children: Vec<GreenId> = vec![as_kw.0, alias.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         AliasClauseGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::AliasClause,
             details: GreenNodeDetails::Node { children, width },
@@ -13991,7 +13991,7 @@ pub struct OptionAliasClauseEmpty {
 impl OptionAliasClauseEmpty {
     pub fn new_green(db: &dyn SyntaxGroup) -> OptionAliasClauseEmptyGreen {
         let children: Vec<GreenId> = vec![];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         OptionAliasClauseEmptyGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::OptionAliasClauseEmpty,
             details: GreenNodeDetails::Node { children, width },
@@ -14132,7 +14132,7 @@ impl GenericArgNamed {
         value: GenericArgValueGreen,
     ) -> GenericArgNamedGreen {
         let children: Vec<GreenId> = vec![name.0, colon.0, value.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         GenericArgNamedGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::GenericArgNamed,
             details: GreenNodeDetails::Node { children, width },
@@ -14207,7 +14207,7 @@ impl GenericArgUnnamed {
     pub const INDEX_VALUE: usize = 0;
     pub fn new_green(db: &dyn SyntaxGroup, value: GenericArgValueGreen) -> GenericArgUnnamedGreen {
         let children: Vec<GreenId> = vec![value.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         GenericArgUnnamedGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::GenericArgUnnamed,
             details: GreenNodeDetails::Node { children, width },
@@ -14350,7 +14350,7 @@ impl GenericArgValueExpr {
     pub const INDEX_EXPR: usize = 0;
     pub fn new_green(db: &dyn SyntaxGroup, expr: ExprGreen) -> GenericArgValueExprGreen {
         let children: Vec<GreenId> = vec![expr.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         GenericArgValueExprGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::GenericArgValueExpr,
             details: GreenNodeDetails::Node { children, width },
@@ -14422,7 +14422,7 @@ impl GenericArgs {
         rangle: TerminalGTGreen,
     ) -> GenericArgsGreen {
         let children: Vec<GreenId> = vec![langle.0, generic_args.0, rangle.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         GenericArgsGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::GenericArgs,
             details: GreenNodeDetails::Node { children, width },
@@ -14655,7 +14655,7 @@ pub struct OptionWrappedGenericParamListEmpty {
 impl OptionWrappedGenericParamListEmpty {
     pub fn new_green(db: &dyn SyntaxGroup) -> OptionWrappedGenericParamListEmptyGreen {
         let children: Vec<GreenId> = vec![];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         OptionWrappedGenericParamListEmptyGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::OptionWrappedGenericParamListEmpty,
             details: GreenNodeDetails::Node { children, width },
@@ -14720,7 +14720,7 @@ impl WrappedGenericParamList {
         rangle: TerminalGTGreen,
     ) -> WrappedGenericParamListGreen {
         let children: Vec<GreenId> = vec![langle.0, generic_params.0, rangle.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         WrappedGenericParamListGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::WrappedGenericParamList,
             details: GreenNodeDetails::Node { children, width },
@@ -14997,7 +14997,7 @@ impl GenericParamType {
     pub const INDEX_NAME: usize = 0;
     pub fn new_green(db: &dyn SyntaxGroup, name: TerminalIdentifierGreen) -> GenericParamTypeGreen {
         let children: Vec<GreenId> = vec![name.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         GenericParamTypeGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::GenericParamType,
             details: GreenNodeDetails::Node { children, width },
@@ -15079,7 +15079,7 @@ impl GenericParamConst {
         ty: ExprGreen,
     ) -> GenericParamConstGreen {
         let children: Vec<GreenId> = vec![const_kw.0, name.0, colon.0, ty.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         GenericParamConstGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::GenericParamConst,
             details: GreenNodeDetails::Node { children, width },
@@ -15175,7 +15175,7 @@ impl GenericParamImplNamed {
         trait_path: ExprPathGreen,
     ) -> GenericParamImplNamedGreen {
         let children: Vec<GreenId> = vec![impl_kw.0, name.0, colon.0, trait_path.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         GenericParamImplNamedGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::GenericParamImplNamed,
             details: GreenNodeDetails::Node { children, width },
@@ -15267,7 +15267,7 @@ impl GenericParamImplAnonymous {
         trait_path: ExprPathGreen,
     ) -> GenericParamImplAnonymousGreen {
         let children: Vec<GreenId> = vec![plus.0, trait_path.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         GenericParamImplAnonymousGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::GenericParamImplAnonymous,
             details: GreenNodeDetails::Node { children, width },
@@ -15340,7 +15340,7 @@ impl GenericParamNegativeImpl {
         trait_path: ExprPathGreen,
     ) -> GenericParamNegativeImplGreen {
         let children: Vec<GreenId> = vec![minus.0, trait_path.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         GenericParamNegativeImplGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::GenericParamNegativeImpl,
             details: GreenNodeDetails::Node { children, width },
@@ -15408,7 +15408,7 @@ impl TriviumSkippedNode {
     pub const INDEX_NODE: usize = 0;
     pub fn new_green(db: &dyn SyntaxGroup, node: SkippedNodeGreen) -> TriviumSkippedNodeGreen {
         let children: Vec<GreenId> = vec![node.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         TriviumSkippedNodeGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::TriviumSkippedNode,
             details: GreenNodeDetails::Node { children, width },
@@ -15616,7 +15616,7 @@ impl Terminal for TerminalIdentifier {
         trailing_trivia: TriviaGreen,
     ) -> Self::Green {
         let children: Vec<GreenId> = vec![leading_trivia.0, token.0, trailing_trivia.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         TerminalIdentifierGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::TerminalIdentifier,
             details: GreenNodeDetails::Node { children, width },
@@ -15762,7 +15762,7 @@ impl Terminal for TerminalLiteralNumber {
         trailing_trivia: TriviaGreen,
     ) -> Self::Green {
         let children: Vec<GreenId> = vec![leading_trivia.0, token.0, trailing_trivia.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         TerminalLiteralNumberGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::TerminalLiteralNumber,
             details: GreenNodeDetails::Node { children, width },
@@ -15907,7 +15907,7 @@ impl Terminal for TerminalShortString {
         trailing_trivia: TriviaGreen,
     ) -> Self::Green {
         let children: Vec<GreenId> = vec![leading_trivia.0, token.0, trailing_trivia.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         TerminalShortStringGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::TerminalShortString,
             details: GreenNodeDetails::Node { children, width },
@@ -16052,7 +16052,7 @@ impl Terminal for TerminalString {
         trailing_trivia: TriviaGreen,
     ) -> Self::Green {
         let children: Vec<GreenId> = vec![leading_trivia.0, token.0, trailing_trivia.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         TerminalStringGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::TerminalString,
             details: GreenNodeDetails::Node { children, width },
@@ -16197,7 +16197,7 @@ impl Terminal for TerminalAs {
         trailing_trivia: TriviaGreen,
     ) -> Self::Green {
         let children: Vec<GreenId> = vec![leading_trivia.0, token.0, trailing_trivia.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         TerminalAsGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::TerminalAs,
             details: GreenNodeDetails::Node { children, width },
@@ -16342,7 +16342,7 @@ impl Terminal for TerminalConst {
         trailing_trivia: TriviaGreen,
     ) -> Self::Green {
         let children: Vec<GreenId> = vec![leading_trivia.0, token.0, trailing_trivia.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         TerminalConstGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::TerminalConst,
             details: GreenNodeDetails::Node { children, width },
@@ -16487,7 +16487,7 @@ impl Terminal for TerminalElse {
         trailing_trivia: TriviaGreen,
     ) -> Self::Green {
         let children: Vec<GreenId> = vec![leading_trivia.0, token.0, trailing_trivia.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         TerminalElseGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::TerminalElse,
             details: GreenNodeDetails::Node { children, width },
@@ -16632,7 +16632,7 @@ impl Terminal for TerminalEnum {
         trailing_trivia: TriviaGreen,
     ) -> Self::Green {
         let children: Vec<GreenId> = vec![leading_trivia.0, token.0, trailing_trivia.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         TerminalEnumGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::TerminalEnum,
             details: GreenNodeDetails::Node { children, width },
@@ -16777,7 +16777,7 @@ impl Terminal for TerminalExtern {
         trailing_trivia: TriviaGreen,
     ) -> Self::Green {
         let children: Vec<GreenId> = vec![leading_trivia.0, token.0, trailing_trivia.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         TerminalExternGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::TerminalExtern,
             details: GreenNodeDetails::Node { children, width },
@@ -16922,7 +16922,7 @@ impl Terminal for TerminalFalse {
         trailing_trivia: TriviaGreen,
     ) -> Self::Green {
         let children: Vec<GreenId> = vec![leading_trivia.0, token.0, trailing_trivia.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         TerminalFalseGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::TerminalFalse,
             details: GreenNodeDetails::Node { children, width },
@@ -17067,7 +17067,7 @@ impl Terminal for TerminalFunction {
         trailing_trivia: TriviaGreen,
     ) -> Self::Green {
         let children: Vec<GreenId> = vec![leading_trivia.0, token.0, trailing_trivia.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         TerminalFunctionGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::TerminalFunction,
             details: GreenNodeDetails::Node { children, width },
@@ -17212,7 +17212,7 @@ impl Terminal for TerminalIf {
         trailing_trivia: TriviaGreen,
     ) -> Self::Green {
         let children: Vec<GreenId> = vec![leading_trivia.0, token.0, trailing_trivia.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         TerminalIfGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::TerminalIf,
             details: GreenNodeDetails::Node { children, width },
@@ -17357,7 +17357,7 @@ impl Terminal for TerminalWhile {
         trailing_trivia: TriviaGreen,
     ) -> Self::Green {
         let children: Vec<GreenId> = vec![leading_trivia.0, token.0, trailing_trivia.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         TerminalWhileGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::TerminalWhile,
             details: GreenNodeDetails::Node { children, width },
@@ -17502,7 +17502,7 @@ impl Terminal for TerminalLoop {
         trailing_trivia: TriviaGreen,
     ) -> Self::Green {
         let children: Vec<GreenId> = vec![leading_trivia.0, token.0, trailing_trivia.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         TerminalLoopGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::TerminalLoop,
             details: GreenNodeDetails::Node { children, width },
@@ -17647,7 +17647,7 @@ impl Terminal for TerminalImpl {
         trailing_trivia: TriviaGreen,
     ) -> Self::Green {
         let children: Vec<GreenId> = vec![leading_trivia.0, token.0, trailing_trivia.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         TerminalImplGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::TerminalImpl,
             details: GreenNodeDetails::Node { children, width },
@@ -17792,7 +17792,7 @@ impl Terminal for TerminalImplicits {
         trailing_trivia: TriviaGreen,
     ) -> Self::Green {
         let children: Vec<GreenId> = vec![leading_trivia.0, token.0, trailing_trivia.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         TerminalImplicitsGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::TerminalImplicits,
             details: GreenNodeDetails::Node { children, width },
@@ -17937,7 +17937,7 @@ impl Terminal for TerminalLet {
         trailing_trivia: TriviaGreen,
     ) -> Self::Green {
         let children: Vec<GreenId> = vec![leading_trivia.0, token.0, trailing_trivia.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         TerminalLetGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::TerminalLet,
             details: GreenNodeDetails::Node { children, width },
@@ -18082,7 +18082,7 @@ impl Terminal for TerminalMatch {
         trailing_trivia: TriviaGreen,
     ) -> Self::Green {
         let children: Vec<GreenId> = vec![leading_trivia.0, token.0, trailing_trivia.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         TerminalMatchGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::TerminalMatch,
             details: GreenNodeDetails::Node { children, width },
@@ -18227,7 +18227,7 @@ impl Terminal for TerminalModule {
         trailing_trivia: TriviaGreen,
     ) -> Self::Green {
         let children: Vec<GreenId> = vec![leading_trivia.0, token.0, trailing_trivia.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         TerminalModuleGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::TerminalModule,
             details: GreenNodeDetails::Node { children, width },
@@ -18372,7 +18372,7 @@ impl Terminal for TerminalMut {
         trailing_trivia: TriviaGreen,
     ) -> Self::Green {
         let children: Vec<GreenId> = vec![leading_trivia.0, token.0, trailing_trivia.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         TerminalMutGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::TerminalMut,
             details: GreenNodeDetails::Node { children, width },
@@ -18517,7 +18517,7 @@ impl Terminal for TerminalNoPanic {
         trailing_trivia: TriviaGreen,
     ) -> Self::Green {
         let children: Vec<GreenId> = vec![leading_trivia.0, token.0, trailing_trivia.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         TerminalNoPanicGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::TerminalNoPanic,
             details: GreenNodeDetails::Node { children, width },
@@ -18662,7 +18662,7 @@ impl Terminal for TerminalOf {
         trailing_trivia: TriviaGreen,
     ) -> Self::Green {
         let children: Vec<GreenId> = vec![leading_trivia.0, token.0, trailing_trivia.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         TerminalOfGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::TerminalOf,
             details: GreenNodeDetails::Node { children, width },
@@ -18807,7 +18807,7 @@ impl Terminal for TerminalRef {
         trailing_trivia: TriviaGreen,
     ) -> Self::Green {
         let children: Vec<GreenId> = vec![leading_trivia.0, token.0, trailing_trivia.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         TerminalRefGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::TerminalRef,
             details: GreenNodeDetails::Node { children, width },
@@ -18952,7 +18952,7 @@ impl Terminal for TerminalContinue {
         trailing_trivia: TriviaGreen,
     ) -> Self::Green {
         let children: Vec<GreenId> = vec![leading_trivia.0, token.0, trailing_trivia.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         TerminalContinueGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::TerminalContinue,
             details: GreenNodeDetails::Node { children, width },
@@ -19097,7 +19097,7 @@ impl Terminal for TerminalReturn {
         trailing_trivia: TriviaGreen,
     ) -> Self::Green {
         let children: Vec<GreenId> = vec![leading_trivia.0, token.0, trailing_trivia.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         TerminalReturnGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::TerminalReturn,
             details: GreenNodeDetails::Node { children, width },
@@ -19242,7 +19242,7 @@ impl Terminal for TerminalBreak {
         trailing_trivia: TriviaGreen,
     ) -> Self::Green {
         let children: Vec<GreenId> = vec![leading_trivia.0, token.0, trailing_trivia.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         TerminalBreakGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::TerminalBreak,
             details: GreenNodeDetails::Node { children, width },
@@ -19387,7 +19387,7 @@ impl Terminal for TerminalStruct {
         trailing_trivia: TriviaGreen,
     ) -> Self::Green {
         let children: Vec<GreenId> = vec![leading_trivia.0, token.0, trailing_trivia.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         TerminalStructGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::TerminalStruct,
             details: GreenNodeDetails::Node { children, width },
@@ -19532,7 +19532,7 @@ impl Terminal for TerminalTrait {
         trailing_trivia: TriviaGreen,
     ) -> Self::Green {
         let children: Vec<GreenId> = vec![leading_trivia.0, token.0, trailing_trivia.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         TerminalTraitGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::TerminalTrait,
             details: GreenNodeDetails::Node { children, width },
@@ -19677,7 +19677,7 @@ impl Terminal for TerminalTrue {
         trailing_trivia: TriviaGreen,
     ) -> Self::Green {
         let children: Vec<GreenId> = vec![leading_trivia.0, token.0, trailing_trivia.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         TerminalTrueGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::TerminalTrue,
             details: GreenNodeDetails::Node { children, width },
@@ -19822,7 +19822,7 @@ impl Terminal for TerminalType {
         trailing_trivia: TriviaGreen,
     ) -> Self::Green {
         let children: Vec<GreenId> = vec![leading_trivia.0, token.0, trailing_trivia.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         TerminalTypeGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::TerminalType,
             details: GreenNodeDetails::Node { children, width },
@@ -19967,7 +19967,7 @@ impl Terminal for TerminalUse {
         trailing_trivia: TriviaGreen,
     ) -> Self::Green {
         let children: Vec<GreenId> = vec![leading_trivia.0, token.0, trailing_trivia.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         TerminalUseGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::TerminalUse,
             details: GreenNodeDetails::Node { children, width },
@@ -20112,7 +20112,7 @@ impl Terminal for TerminalPub {
         trailing_trivia: TriviaGreen,
     ) -> Self::Green {
         let children: Vec<GreenId> = vec![leading_trivia.0, token.0, trailing_trivia.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         TerminalPubGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::TerminalPub,
             details: GreenNodeDetails::Node { children, width },
@@ -20257,7 +20257,7 @@ impl Terminal for TerminalAnd {
         trailing_trivia: TriviaGreen,
     ) -> Self::Green {
         let children: Vec<GreenId> = vec![leading_trivia.0, token.0, trailing_trivia.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         TerminalAndGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::TerminalAnd,
             details: GreenNodeDetails::Node { children, width },
@@ -20402,7 +20402,7 @@ impl Terminal for TerminalAndAnd {
         trailing_trivia: TriviaGreen,
     ) -> Self::Green {
         let children: Vec<GreenId> = vec![leading_trivia.0, token.0, trailing_trivia.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         TerminalAndAndGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::TerminalAndAnd,
             details: GreenNodeDetails::Node { children, width },
@@ -20547,7 +20547,7 @@ impl Terminal for TerminalArrow {
         trailing_trivia: TriviaGreen,
     ) -> Self::Green {
         let children: Vec<GreenId> = vec![leading_trivia.0, token.0, trailing_trivia.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         TerminalArrowGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::TerminalArrow,
             details: GreenNodeDetails::Node { children, width },
@@ -20692,7 +20692,7 @@ impl Terminal for TerminalAt {
         trailing_trivia: TriviaGreen,
     ) -> Self::Green {
         let children: Vec<GreenId> = vec![leading_trivia.0, token.0, trailing_trivia.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         TerminalAtGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::TerminalAt,
             details: GreenNodeDetails::Node { children, width },
@@ -20838,7 +20838,7 @@ impl Terminal for TerminalBadCharacters {
         trailing_trivia: TriviaGreen,
     ) -> Self::Green {
         let children: Vec<GreenId> = vec![leading_trivia.0, token.0, trailing_trivia.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         TerminalBadCharactersGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::TerminalBadCharacters,
             details: GreenNodeDetails::Node { children, width },
@@ -20983,7 +20983,7 @@ impl Terminal for TerminalColon {
         trailing_trivia: TriviaGreen,
     ) -> Self::Green {
         let children: Vec<GreenId> = vec![leading_trivia.0, token.0, trailing_trivia.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         TerminalColonGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::TerminalColon,
             details: GreenNodeDetails::Node { children, width },
@@ -21128,7 +21128,7 @@ impl Terminal for TerminalColonColon {
         trailing_trivia: TriviaGreen,
     ) -> Self::Green {
         let children: Vec<GreenId> = vec![leading_trivia.0, token.0, trailing_trivia.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         TerminalColonColonGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::TerminalColonColon,
             details: GreenNodeDetails::Node { children, width },
@@ -21273,7 +21273,7 @@ impl Terminal for TerminalComma {
         trailing_trivia: TriviaGreen,
     ) -> Self::Green {
         let children: Vec<GreenId> = vec![leading_trivia.0, token.0, trailing_trivia.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         TerminalCommaGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::TerminalComma,
             details: GreenNodeDetails::Node { children, width },
@@ -21418,7 +21418,7 @@ impl Terminal for TerminalDiv {
         trailing_trivia: TriviaGreen,
     ) -> Self::Green {
         let children: Vec<GreenId> = vec![leading_trivia.0, token.0, trailing_trivia.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         TerminalDivGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::TerminalDiv,
             details: GreenNodeDetails::Node { children, width },
@@ -21563,7 +21563,7 @@ impl Terminal for TerminalDivEq {
         trailing_trivia: TriviaGreen,
     ) -> Self::Green {
         let children: Vec<GreenId> = vec![leading_trivia.0, token.0, trailing_trivia.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         TerminalDivEqGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::TerminalDivEq,
             details: GreenNodeDetails::Node { children, width },
@@ -21708,7 +21708,7 @@ impl Terminal for TerminalDot {
         trailing_trivia: TriviaGreen,
     ) -> Self::Green {
         let children: Vec<GreenId> = vec![leading_trivia.0, token.0, trailing_trivia.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         TerminalDotGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::TerminalDot,
             details: GreenNodeDetails::Node { children, width },
@@ -21853,7 +21853,7 @@ impl Terminal for TerminalDotDot {
         trailing_trivia: TriviaGreen,
     ) -> Self::Green {
         let children: Vec<GreenId> = vec![leading_trivia.0, token.0, trailing_trivia.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         TerminalDotDotGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::TerminalDotDot,
             details: GreenNodeDetails::Node { children, width },
@@ -21998,7 +21998,7 @@ impl Terminal for TerminalEndOfFile {
         trailing_trivia: TriviaGreen,
     ) -> Self::Green {
         let children: Vec<GreenId> = vec![leading_trivia.0, token.0, trailing_trivia.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         TerminalEndOfFileGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::TerminalEndOfFile,
             details: GreenNodeDetails::Node { children, width },
@@ -22143,7 +22143,7 @@ impl Terminal for TerminalEq {
         trailing_trivia: TriviaGreen,
     ) -> Self::Green {
         let children: Vec<GreenId> = vec![leading_trivia.0, token.0, trailing_trivia.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         TerminalEqGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::TerminalEq,
             details: GreenNodeDetails::Node { children, width },
@@ -22288,7 +22288,7 @@ impl Terminal for TerminalEqEq {
         trailing_trivia: TriviaGreen,
     ) -> Self::Green {
         let children: Vec<GreenId> = vec![leading_trivia.0, token.0, trailing_trivia.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         TerminalEqEqGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::TerminalEqEq,
             details: GreenNodeDetails::Node { children, width },
@@ -22433,7 +22433,7 @@ impl Terminal for TerminalGE {
         trailing_trivia: TriviaGreen,
     ) -> Self::Green {
         let children: Vec<GreenId> = vec![leading_trivia.0, token.0, trailing_trivia.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         TerminalGEGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::TerminalGE,
             details: GreenNodeDetails::Node { children, width },
@@ -22578,7 +22578,7 @@ impl Terminal for TerminalGT {
         trailing_trivia: TriviaGreen,
     ) -> Self::Green {
         let children: Vec<GreenId> = vec![leading_trivia.0, token.0, trailing_trivia.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         TerminalGTGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::TerminalGT,
             details: GreenNodeDetails::Node { children, width },
@@ -22723,7 +22723,7 @@ impl Terminal for TerminalHash {
         trailing_trivia: TriviaGreen,
     ) -> Self::Green {
         let children: Vec<GreenId> = vec![leading_trivia.0, token.0, trailing_trivia.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         TerminalHashGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::TerminalHash,
             details: GreenNodeDetails::Node { children, width },
@@ -22868,7 +22868,7 @@ impl Terminal for TerminalLBrace {
         trailing_trivia: TriviaGreen,
     ) -> Self::Green {
         let children: Vec<GreenId> = vec![leading_trivia.0, token.0, trailing_trivia.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         TerminalLBraceGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::TerminalLBrace,
             details: GreenNodeDetails::Node { children, width },
@@ -23013,7 +23013,7 @@ impl Terminal for TerminalLBrack {
         trailing_trivia: TriviaGreen,
     ) -> Self::Green {
         let children: Vec<GreenId> = vec![leading_trivia.0, token.0, trailing_trivia.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         TerminalLBrackGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::TerminalLBrack,
             details: GreenNodeDetails::Node { children, width },
@@ -23158,7 +23158,7 @@ impl Terminal for TerminalLE {
         trailing_trivia: TriviaGreen,
     ) -> Self::Green {
         let children: Vec<GreenId> = vec![leading_trivia.0, token.0, trailing_trivia.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         TerminalLEGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::TerminalLE,
             details: GreenNodeDetails::Node { children, width },
@@ -23303,7 +23303,7 @@ impl Terminal for TerminalLParen {
         trailing_trivia: TriviaGreen,
     ) -> Self::Green {
         let children: Vec<GreenId> = vec![leading_trivia.0, token.0, trailing_trivia.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         TerminalLParenGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::TerminalLParen,
             details: GreenNodeDetails::Node { children, width },
@@ -23448,7 +23448,7 @@ impl Terminal for TerminalLT {
         trailing_trivia: TriviaGreen,
     ) -> Self::Green {
         let children: Vec<GreenId> = vec![leading_trivia.0, token.0, trailing_trivia.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         TerminalLTGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::TerminalLT,
             details: GreenNodeDetails::Node { children, width },
@@ -23593,7 +23593,7 @@ impl Terminal for TerminalMatchArrow {
         trailing_trivia: TriviaGreen,
     ) -> Self::Green {
         let children: Vec<GreenId> = vec![leading_trivia.0, token.0, trailing_trivia.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         TerminalMatchArrowGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::TerminalMatchArrow,
             details: GreenNodeDetails::Node { children, width },
@@ -23738,7 +23738,7 @@ impl Terminal for TerminalMinus {
         trailing_trivia: TriviaGreen,
     ) -> Self::Green {
         let children: Vec<GreenId> = vec![leading_trivia.0, token.0, trailing_trivia.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         TerminalMinusGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::TerminalMinus,
             details: GreenNodeDetails::Node { children, width },
@@ -23883,7 +23883,7 @@ impl Terminal for TerminalMinusEq {
         trailing_trivia: TriviaGreen,
     ) -> Self::Green {
         let children: Vec<GreenId> = vec![leading_trivia.0, token.0, trailing_trivia.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         TerminalMinusEqGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::TerminalMinusEq,
             details: GreenNodeDetails::Node { children, width },
@@ -24028,7 +24028,7 @@ impl Terminal for TerminalMod {
         trailing_trivia: TriviaGreen,
     ) -> Self::Green {
         let children: Vec<GreenId> = vec![leading_trivia.0, token.0, trailing_trivia.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         TerminalModGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::TerminalMod,
             details: GreenNodeDetails::Node { children, width },
@@ -24173,7 +24173,7 @@ impl Terminal for TerminalModEq {
         trailing_trivia: TriviaGreen,
     ) -> Self::Green {
         let children: Vec<GreenId> = vec![leading_trivia.0, token.0, trailing_trivia.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         TerminalModEqGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::TerminalModEq,
             details: GreenNodeDetails::Node { children, width },
@@ -24318,7 +24318,7 @@ impl Terminal for TerminalMul {
         trailing_trivia: TriviaGreen,
     ) -> Self::Green {
         let children: Vec<GreenId> = vec![leading_trivia.0, token.0, trailing_trivia.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         TerminalMulGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::TerminalMul,
             details: GreenNodeDetails::Node { children, width },
@@ -24463,7 +24463,7 @@ impl Terminal for TerminalMulEq {
         trailing_trivia: TriviaGreen,
     ) -> Self::Green {
         let children: Vec<GreenId> = vec![leading_trivia.0, token.0, trailing_trivia.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         TerminalMulEqGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::TerminalMulEq,
             details: GreenNodeDetails::Node { children, width },
@@ -24608,7 +24608,7 @@ impl Terminal for TerminalNeq {
         trailing_trivia: TriviaGreen,
     ) -> Self::Green {
         let children: Vec<GreenId> = vec![leading_trivia.0, token.0, trailing_trivia.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         TerminalNeqGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::TerminalNeq,
             details: GreenNodeDetails::Node { children, width },
@@ -24753,7 +24753,7 @@ impl Terminal for TerminalNot {
         trailing_trivia: TriviaGreen,
     ) -> Self::Green {
         let children: Vec<GreenId> = vec![leading_trivia.0, token.0, trailing_trivia.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         TerminalNotGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::TerminalNot,
             details: GreenNodeDetails::Node { children, width },
@@ -24898,7 +24898,7 @@ impl Terminal for TerminalBitNot {
         trailing_trivia: TriviaGreen,
     ) -> Self::Green {
         let children: Vec<GreenId> = vec![leading_trivia.0, token.0, trailing_trivia.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         TerminalBitNotGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::TerminalBitNot,
             details: GreenNodeDetails::Node { children, width },
@@ -25043,7 +25043,7 @@ impl Terminal for TerminalOr {
         trailing_trivia: TriviaGreen,
     ) -> Self::Green {
         let children: Vec<GreenId> = vec![leading_trivia.0, token.0, trailing_trivia.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         TerminalOrGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::TerminalOr,
             details: GreenNodeDetails::Node { children, width },
@@ -25188,7 +25188,7 @@ impl Terminal for TerminalOrOr {
         trailing_trivia: TriviaGreen,
     ) -> Self::Green {
         let children: Vec<GreenId> = vec![leading_trivia.0, token.0, trailing_trivia.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         TerminalOrOrGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::TerminalOrOr,
             details: GreenNodeDetails::Node { children, width },
@@ -25333,7 +25333,7 @@ impl Terminal for TerminalPlus {
         trailing_trivia: TriviaGreen,
     ) -> Self::Green {
         let children: Vec<GreenId> = vec![leading_trivia.0, token.0, trailing_trivia.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         TerminalPlusGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::TerminalPlus,
             details: GreenNodeDetails::Node { children, width },
@@ -25478,7 +25478,7 @@ impl Terminal for TerminalPlusEq {
         trailing_trivia: TriviaGreen,
     ) -> Self::Green {
         let children: Vec<GreenId> = vec![leading_trivia.0, token.0, trailing_trivia.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         TerminalPlusEqGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::TerminalPlusEq,
             details: GreenNodeDetails::Node { children, width },
@@ -25623,7 +25623,7 @@ impl Terminal for TerminalQuestionMark {
         trailing_trivia: TriviaGreen,
     ) -> Self::Green {
         let children: Vec<GreenId> = vec![leading_trivia.0, token.0, trailing_trivia.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         TerminalQuestionMarkGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::TerminalQuestionMark,
             details: GreenNodeDetails::Node { children, width },
@@ -25768,7 +25768,7 @@ impl Terminal for TerminalRBrace {
         trailing_trivia: TriviaGreen,
     ) -> Self::Green {
         let children: Vec<GreenId> = vec![leading_trivia.0, token.0, trailing_trivia.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         TerminalRBraceGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::TerminalRBrace,
             details: GreenNodeDetails::Node { children, width },
@@ -25913,7 +25913,7 @@ impl Terminal for TerminalRBrack {
         trailing_trivia: TriviaGreen,
     ) -> Self::Green {
         let children: Vec<GreenId> = vec![leading_trivia.0, token.0, trailing_trivia.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         TerminalRBrackGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::TerminalRBrack,
             details: GreenNodeDetails::Node { children, width },
@@ -26058,7 +26058,7 @@ impl Terminal for TerminalRParen {
         trailing_trivia: TriviaGreen,
     ) -> Self::Green {
         let children: Vec<GreenId> = vec![leading_trivia.0, token.0, trailing_trivia.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         TerminalRParenGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::TerminalRParen,
             details: GreenNodeDetails::Node { children, width },
@@ -26203,7 +26203,7 @@ impl Terminal for TerminalSemicolon {
         trailing_trivia: TriviaGreen,
     ) -> Self::Green {
         let children: Vec<GreenId> = vec![leading_trivia.0, token.0, trailing_trivia.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         TerminalSemicolonGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::TerminalSemicolon,
             details: GreenNodeDetails::Node { children, width },
@@ -26348,7 +26348,7 @@ impl Terminal for TerminalUnderscore {
         trailing_trivia: TriviaGreen,
     ) -> Self::Green {
         let children: Vec<GreenId> = vec![leading_trivia.0, token.0, trailing_trivia.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         TerminalUnderscoreGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::TerminalUnderscore,
             details: GreenNodeDetails::Node { children, width },
@@ -26493,7 +26493,7 @@ impl Terminal for TerminalXor {
         trailing_trivia: TriviaGreen,
     ) -> Self::Green {
         let children: Vec<GreenId> = vec![leading_trivia.0, token.0, trailing_trivia.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         TerminalXorGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::TerminalXor,
             details: GreenNodeDetails::Node { children, width },
@@ -26576,7 +26576,7 @@ impl SyntaxFile {
         eof: TerminalEndOfFileGreen,
     ) -> SyntaxFileGreen {
         let children: Vec<GreenId> = vec![items.0, eof.0];
-        let width = children.iter().copied().map(|id| db.lookup_intern_green(id).width()).sum();
+        let width = children.iter().copied().map(|id| id.lookup_intern(db).width()).sum();
         SyntaxFileGreen(db.intern_green(Arc::new(GreenNode {
             kind: SyntaxKind::SyntaxFile,
             details: GreenNodeDetails::Node { children, width },

@@ -253,7 +253,7 @@ pub trait SemanticStructEx<'a>: Upcast<dyn SemanticGroup + 'a> {
         //   always have the correct number of generic arguments.
         let db = self.upcast();
         let generic_params = db.struct_generic_params(concrete_struct_id.struct_id(db))?;
-        let generic_args = db.lookup_intern_concrete_struct(concrete_struct_id).generic_args;
+        let generic_args = concrete_struct_id.lookup_intern(db).generic_args;
         let substitution = GenericSubstitution::new(&generic_params, &generic_args);
 
         let generic_members =

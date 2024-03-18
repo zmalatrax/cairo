@@ -6,7 +6,7 @@ use cairo_lang_filesystem::ids::{CrateId, CrateLongId};
 use cairo_lang_syntax::node::ast::{self, BinaryOperator, UnaryOperator};
 use cairo_lang_syntax::node::ids::SyntaxStablePtrId;
 use cairo_lang_syntax::node::Terminal;
-use cairo_lang_utils::{extract_matches, try_extract_matches, OptionFrom};
+use cairo_lang_utils::{extract_matches, try_extract_matches, LookupInternUpcast, OptionFrom};
 use num_bigint::BigInt;
 use num_traits::{Num, Signed, ToPrimitive, Zero};
 use smol_str::SmolStr;
@@ -324,7 +324,7 @@ pub fn unwrap_error_propagation_type(
     db: &dyn SemanticGroup,
     ty: TypeId,
 ) -> Option<(ConcreteVariant, ConcreteVariant)> {
-    match db.lookup_intern_type(ty) {
+    match ty.lookup_intern(db) {
         // Only enums may be `Result` and `Option` types.
         TypeLongId::Concrete(semantic::ConcreteTypeId::Enum(enm)) => {
             let name = enm.enum_id(db.upcast()).name(db.upcast());
@@ -737,8 +737,7 @@ pub fn validate_literal(
 pub fn try_extract_nz_wrapped_type(db: &dyn SemanticGroup, ty: TypeId) -> Option<TypeId> {
     let concrete_ty = try_extract_matches!(db.lookup_intern_type(ty), TypeLongId::Concrete)?;
     let extern_ty = try_extract_matches!(concrete_ty, ConcreteTypeId::Extern)?;
-    let ConcreteExternTypeLongId { extern_type_id, generic_args } =
-        db.lookup_intern_concrete_extern_type(extern_ty);
+    let ConcreteExternTypeLongId { extern_type_id, generic_args } = extern_ty.lookup_intern(db);
     let [GenericArgumentId::Type(inner)] = generic_args[..] else { return None };
     (extern_type_id.name(db.upcast()) == "NonZero").then_some(inner)
 }

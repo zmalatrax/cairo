@@ -19,7 +19,7 @@ use cairo_lang_syntax as syntax;
 use cairo_lang_utils::ordered_hash_map::OrderedHashMap;
 use cairo_lang_utils::ordered_hash_set::OrderedHashSet;
 use cairo_lang_utils::unordered_hash_map::UnorderedHashMap;
-use cairo_lang_utils::{define_short_id, extract_matches, try_extract_matches};
+use cairo_lang_utils::{define_short_id, extract_matches, try_extract_matches, LookupInternUpcast};
 use itertools::{chain, izip, Itertools};
 use smol_str::SmolStr;
 use syntax::attribute::structured::{Attribute, AttributeListStructurize};
@@ -324,7 +324,7 @@ pub fn impl_def_trait(db: &dyn SemanticGroup, impl_def_id: ImplDefId) -> Maybe<T
 pub fn impl_concrete_trait(db: &dyn SemanticGroup, impl_id: ImplId) -> Maybe<ConcreteTraitId> {
     match impl_id {
         ImplId::Concrete(concrete_impl_id) => {
-            let long_impl = db.lookup_intern_concrete_impl(concrete_impl_id);
+            let long_impl = concrete_impl_id.lookup_intern(db);
             let substitution = GenericSubstitution::new(
                 &db.impl_def_generic_params(long_impl.impl_def_id)?,
                 &long_impl.generic_args,
@@ -682,7 +682,7 @@ pub fn priv_impl_definition_data(
     // TODO(yuval): Once default implementation of trait functions is supported, filter such
     // functions out.
     let impl_item_names: OrderedHashSet<SmolStr> = item_id_by_name.keys().cloned().collect();
-    let trait_id = db.lookup_intern_concrete_trait(concrete_trait).trait_id;
+    let trait_id = concrete_trait.lookup_intern(db).trait_id;
     let trait_item_names = db.trait_item_names(trait_id)?;
     let missing_items_in_impl =
         trait_item_names.difference(&impl_item_names).cloned().collect::<Vec<_>>();
@@ -724,8 +724,7 @@ fn check_special_impls(
     concrete_trait: ConcreteTraitId,
     stable_ptr: SyntaxStablePtrId,
 ) -> Maybe<()> {
-    let ConcreteTraitLongId { trait_id, generic_args } =
-        db.lookup_intern_concrete_trait(concrete_trait);
+    let ConcreteTraitLongId { trait_id, generic_args } = concrete_trait.lookup_intern(db);
     let copy = copy_trait(db);
     let drop = drop_trait(db);
 
@@ -766,7 +765,7 @@ fn check_special_impls(
 ///
 /// For example, a struct containing a type T can implement Drop only if T implements Drop.
 fn get_inner_types(db: &dyn SemanticGroup, ty: TypeId) -> Maybe<Vec<TypeId>> {
-    Ok(match db.lookup_intern_type(ty) {
+    Ok(match ty.lookup_intern(db) {
         TypeLongId::Concrete(concrete_type_id) => {
             // Look for Copy and Drop trait in the defining module.
             match concrete_type_id {

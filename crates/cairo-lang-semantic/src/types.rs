@@ -9,7 +9,9 @@ use cairo_lang_syntax::attribute::consts::{MUST_USE_ATTR, UNSTABLE_ATTR};
 use cairo_lang_syntax::attribute::structured::Attribute;
 use cairo_lang_syntax::node::ids::SyntaxStablePtrId;
 use cairo_lang_syntax::node::{ast, TypedSyntaxNode};
-use cairo_lang_utils::{define_short_id, try_extract_matches, OptionFrom};
+use cairo_lang_utils::{
+    define_short_id, try_extract_matches, LookupInternUpcast, OptionFrom, Upcast,
+};
 use itertools::Itertools;
 use num_bigint::BigInt;
 use num_traits::Zero;
@@ -55,6 +57,15 @@ impl OptionFrom<TypeLongId> for ConcreteTypeId {
 }
 
 define_short_id!(TypeId, TypeLongId, SemanticGroup, lookup_intern_type);
+impl<'a> LookupInternUpcast<'a, (dyn SemanticGroup + 'a), TypeLongId> for TypeId {
+    fn lookup_intern(
+        &self,
+        db: impl cairo_lang_utils::Upcast<&'a (dyn SemanticGroup + 'a)>,
+    ) -> TypeLongId {
+        // TODO(yg): *db.upcast()
+        SemanticGroup::lookup_intern_type(*Upcast::upcast(&db), *self)
+    }
+}
 semantic_object_for_id!(TypeId, lookup_intern_type, intern_type, TypeLongId);
 impl TypeId {
     pub fn missing(db: &dyn SemanticGroup, diag_added: DiagnosticAdded) -> Self {
@@ -328,6 +339,17 @@ define_short_id!(
     SemanticGroup,
     lookup_intern_concrete_extern_type
 );
+impl<'a> LookupInternUpcast<'a, (dyn SemanticGroup + 'a), ConcreteExternTypeLongId>
+    for ConcreteExternTypeId
+{
+    fn lookup_intern(
+        &self,
+        db: impl cairo_lang_utils::Upcast<&'a (dyn SemanticGroup + 'a)>,
+    ) -> ConcreteExternTypeLongId {
+        // TODO(yg): *db.upcast()
+        SemanticGroup::lookup_intern_concrete_extern_type(*Upcast::upcast(&db), *self)
+    }
+}
 semantic_object_for_id!(
     ConcreteExternTypeId,
     lookup_intern_concrete_extern_type,
@@ -551,7 +573,7 @@ pub fn get_impl_at_context(
 
 /// Query implementation of [crate::db::SemanticGroup::single_value_type].
 pub fn single_value_type(db: &dyn SemanticGroup, ty: TypeId) -> Maybe<bool> {
-    Ok(match db.lookup_intern_type(ty) {
+    Ok(match ty.lookup_intern(db) {
         semantic::TypeLongId::Concrete(concrete_type_id) => match concrete_type_id {
             ConcreteTypeId::Struct(id) => {
                 for member in db.struct_members(id.struct_id(db))?.values() {
@@ -617,10 +639,10 @@ pub fn type_info(
 /// Peels all wrapping Snapshot (`@`) from the type.
 /// Returns the number of peeled snapshots and the inner type.
 pub fn peel_snapshots(db: &dyn SemanticGroup, ty: TypeId) -> (usize, TypeLongId) {
-    let mut long_ty = db.lookup_intern_type(ty);
+    let mut long_ty = ty.lookup_intern(db);
     let mut n_snapshots = 0;
     while let TypeLongId::Snapshot(ty) = long_ty {
-        long_ty = db.lookup_intern_type(ty);
+        long_ty = ty.lookup_intern(db);
         n_snapshots += 1;
     }
     (n_snapshots, long_ty)

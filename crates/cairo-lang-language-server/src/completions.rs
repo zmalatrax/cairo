@@ -168,7 +168,7 @@ pub fn colon_colon_completions(
                     .collect()
             })
             .unwrap_or_default(),
-        ResolvedConcreteItem::Type(ty) => match db.lookup_intern_type(ty) {
+        ResolvedConcreteItem::Type(ty) => match ty.lookup_intern(db) {
             TypeLongId::Concrete(ConcreteTypeId::Enum(enum_id)) => db
                 .enum_variants(enum_id.enum_id(db))
                 .unwrap_or_default()
