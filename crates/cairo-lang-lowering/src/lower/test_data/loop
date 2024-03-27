@@ -761,6 +761,15 @@ struct A {
 }
 
 //! > semantic_diagnostics
+error: In an impl, paths of the impl's trait are not allowed. Did you mean to use  `Self::`?
+ --> lib.cairo[impls]:7:20
+        core::fmt::Debug::fmt(self.a, ref f)?;
+                   ^***^
+
+error: In an impl, paths of the impl's trait are not allowed. Did you mean to use  `Self::`?
+ --> lib.cairo[impls]:10:20
+        core::fmt::Debug::fmt(self.b, ref f)?;
+                   ^***^
 
 //! > lowering_diagnostics
 
