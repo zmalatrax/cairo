@@ -152,48 +152,38 @@ fn foo() {}
 foo
 
 //! > module_code
-trait MyTrait {
+trait MyTrait<T> {
     type InputType;
     type OutputType;
     fn foo1(x: Self::InputType) -> Self::OutputType;
     fn foo2();
 }
-impl MyImpl of MyTrait {
+impl MyImpl_u16 of MyTrait<u16> {
     type InputType = u32;
     type OutputType = u32;
-    fn foo1(x: MyTrait::InputType) -> MyTrait::OutputType {
+    fn foo1(x: MyTrait::<u32>::InputType) -> MyTrait::<u32>::OutputType {
         x
     }
     fn foo2() {
-        let _: MyTrait::InputType = 3_u32;
+        let _: MyTrait::<u32>::InputType = 3_u32;
+    }
+}
+impl MyImpl_u32 of MyTrait<u32> {
+    type InputType = u32;
+    type OutputType = u32;
+    fn foo1(x: Self::InputType) -> Self::OutputType {
+        x
+    }
+    fn foo2() {
+        let _: Self::InputType = 3_u32;
     }
 }
 
 //! > expected_diagnostics
-error: In an impl, paths of the impl's trait are not allowed. Did you mean to use  `Self::`?
- --> lib.cairo:10:16
-    fn foo1(x: MyTrait::InputType) -> MyTrait::OutputType {
-               ^*****^
-
-error: In an impl, paths of the impl's trait are not allowed. Did you mean to use  `Self::`?
- --> lib.cairo:10:39
-    fn foo1(x: MyTrait::InputType) -> MyTrait::OutputType {
-                                      ^*****^
-
-error: Parameter type of impl function `MyImpl::foo1` is incompatible with `MyTrait::foo1`. Expected: `core::integer::u32`, actual: `<missing>`.
- --> lib.cairo:10:16
-    fn foo1(x: MyTrait::InputType) -> MyTrait::OutputType {
-               ^****************^
-
-error: Return type of impl function `MyImpl::foo1` is incompatible with `MyTrait::foo1`. Expected: `core::integer::u32`, actual: `<missing>`.
- --> lib.cairo:10:39
-    fn foo1(x: MyTrait::InputType) -> MyTrait::OutputType {
-                                      ^*****************^
-
-error: In an impl, paths of the impl's trait are not allowed. Did you mean to use  `Self::`?
- --> lib.cairo:14:16
-        let _: MyTrait::InputType = 3_u32;
-               ^*****^
+error: Trait has no implementation in context: test::MyTrait::<T>
+ --> lib.cairo:4:22
+    fn foo1(x: Self::InputType) -> Self::OutputType;
+                     ^*******^
 
 //! > ==========================================================================
 

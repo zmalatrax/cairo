@@ -4,11 +4,10 @@ use std::{panic, vec};
 
 use cairo_lang_debug::DebugWithDb;
 use cairo_lang_defs::ids::{
-    FunctionTitleId, FunctionWithBodyId, GenericKind, GenericParamId, ImplAliasId, ImplContext,
-    ImplDefId, ImplFunctionId, ImplFunctionLongId, ImplItemId, ImplTypeDefId, ImplTypeDefLongId,
+    FunctionTitleId, FunctionWithBodyId, GenericKind, GenericParamId, ImplAliasId, ImplDefId,
+    ImplFunctionId, ImplFunctionLongId, ImplItemId, ImplTypeDefId, ImplTypeDefLongId,
     LanguageElementId, LookupItemId, ModuleId, ModuleItemId, NamedLanguageElementId,
-    NamedLanguageElementLongId, TopLevelLanguageElementId, TraitFunctionId, TraitId,
-    TraitOrImplContext, TraitTypeId,
+    NamedLanguageElementLongId, TopLevelLanguageElementId, TraitFunctionId, TraitId, TraitTypeId,
 };
 use cairo_lang_diagnostics::{
     skip_diagnostic, Diagnostics, DiagnosticsBuilder, Maybe, ToMaybe, ToOption,
@@ -35,13 +34,13 @@ use super::functions::{
     forbid_inline_always_with_impl_generic_param, FunctionDeclarationData, InlineConfiguration,
 };
 use super::generics::{semantic_generic_params, GenericArgumentHead, GenericParamsData};
-use super::resolve_trait_path;
 use super::structure::SemanticStructEx;
 use super::trt::{ConcreteTraitGenericFunctionId, ConcreteTraitGenericFunctionLongId};
 use super::type_aliases::{
     type_alias_generic_params_data_helper, type_alias_semantic_data_cycle_helper,
     type_alias_semantic_data_helper, TypeAliasData,
 };
+use super::{resolve_trait_path, ImplContext, TraitOrImplContext};
 use crate::corelib::{copy_trait, drop_trait};
 use crate::db::SemanticGroup;
 use crate::diagnostic::SemanticDiagnosticKind::{self, *};
@@ -426,7 +425,10 @@ pub fn priv_impl_declaration_data_inner(
 
     let attributes = impl_ast.attributes(syntax_db).structurize(syntax_db);
     let mut resolver_data = resolver.data;
-    resolver_data.trait_or_impl_ctx = TraitOrImplContext::Impl(ImplContext { impl_def_id });
+    resolver_data.trait_or_impl_ctx = TraitOrImplContext::Impl(ImplContext {
+        impl_def_id,
+        generic_parameters: generic_params.clone(),
+    });
     Ok(ImplDeclarationData {
         diagnostics: diagnostics.build(),
         generic_params,
@@ -1752,12 +1754,13 @@ fn validate_impl_function_signature(
             },
         );
     }
-    let impl_ctx = Some(ImplContext { impl_def_id });
+    // TODO(yg): generics?
+    let impl_ctx = Some(ImplContext { impl_def_id, generic_parameters: vec![] });
     for (idx, (param, trait_param)) in
         izip!(signature.params.iter(), concrete_trait_signature.params.iter()).enumerate()
     {
-        let expected_ty = implize_type(db, trait_param.ty, impl_ctx, inference)?;
-        let actual_ty = implize_type(db, param.ty, impl_ctx, inference)?;
+        let expected_ty = implize_type(db, trait_param.ty, impl_ctx.clone(), inference)?;
+        let actual_ty = implize_type(db, param.ty, impl_ctx.clone(), inference)?;
 
         if expected_ty != actual_ty {
             diagnostics.report(
@@ -1809,7 +1812,8 @@ fn validate_impl_function_signature(
         diagnostics.report(signature_syntax, PassPanicAsNopanic { impl_function_id, trait_id });
     }
 
-    let expected_ty = implize_type(db, concrete_trait_signature.return_type, impl_ctx, inference)?;
+    let expected_ty =
+        implize_type(db, concrete_trait_signature.return_type, impl_ctx.clone(), inference)?;
     let actual_ty = implize_type(db, signature.return_type, impl_ctx, inference)?;
     if expected_ty != actual_ty {
         let location_ptr = match signature_syntax.ret_ty(syntax_db) {

@@ -3,15 +3,15 @@ use std::marker::PhantomData;
 use std::ops::{Deref, DerefMut};
 
 use cairo_lang_defs::ids::{
-    GenericKind, GenericParamId, GenericTypeId, ImplContext, ImplDefId, LanguageElementId,
-    ModuleFileId, ModuleId, TraitContext, TraitId, TraitItemId, TraitOrImplContext,
+    GenericKind, GenericParamId, GenericTypeId, ImplDefId, LanguageElementId, ModuleFileId,
+    ModuleId, TraitId, TraitItemId,
 };
 use cairo_lang_diagnostics::Maybe;
 use cairo_lang_filesystem::db::Edition;
 use cairo_lang_filesystem::ids::{CrateId, CrateLongId};
 use cairo_lang_proc_macros::DebugWithDb;
 use cairo_lang_syntax as syntax;
-use cairo_lang_syntax::node::helpers::PathSegmentEx;
+use cairo_lang_syntax::node::helpers::{HasGenericArgValue, PathSegmentEx};
 use cairo_lang_syntax::node::ids::SyntaxStablePtrId;
 use cairo_lang_syntax::node::{ast, Terminal, TypedSyntaxNode};
 use cairo_lang_utils::ordered_hash_map::OrderedHashMap;
@@ -39,7 +39,7 @@ use crate::items::trt::{
     ConcreteTraitGenericFunctionLongId, ConcreteTraitId, ConcreteTraitLongId,
     ConcreteTraitTypeLongId,
 };
-use crate::items::visibility;
+use crate::items::{visibility, ImplContext, TraitContext, TraitOrImplContext};
 use crate::substitution::{GenericSubstitution, SemanticRewriter, SubstitutionRewriter};
 use crate::types::{are_coupons_enabled, implize_type, resolve_type, ImplTypeId};
 use crate::{
@@ -129,7 +129,7 @@ impl ResolverData {
             generic_params: self.generic_params.clone(),
             resolved_items: self.resolved_items.clone(),
             inference_data: self.inference_data.clone_with_inference_id(db, inference_id),
-            trait_or_impl_ctx: self.trait_or_impl_ctx,
+            trait_or_impl_ctx: self.trait_or_impl_ctx.clone(),
         }
     }
 }
@@ -332,7 +332,7 @@ impl<'db> Resolver<'db> {
                 let identifier = simple_segment.ident(syntax_db);
 
                 if let Some(resolved_item) =
-                    resolve_self_segment(db, diagnostics, &identifier, self.data.trait_or_impl_ctx)
+                    resolve_self_segment(db, diagnostics, &identifier, &self.data.trait_or_impl_ctx)
                 {
                     // The first segment is "Self". Consume it and return.
                     segments.next().unwrap();
@@ -531,7 +531,17 @@ impl<'db> Resolver<'db> {
                     .module_item_info_by_name(*module_id, ident)?
                     .ok_or_else(|| diagnostics.report(identifier, PathNotFound(item_type)))?;
 
-                self.forbid_same_impl_trait(diagnostics, &inner_item_info, identifier)?;
+                // TODO(yg): inline/change to .map?.
+                let generic_args_syntax_slice = match generic_args_syntax {
+                    Some(ref x) => Some(x.as_slice()),
+                    None => None,
+                };
+                self.forbid_same_impl_trait(
+                    diagnostics,
+                    &inner_item_info,
+                    identifier,
+                    generic_args_syntax_slice,
+                )?;
 
                 self.validate_item_visibility(
                     diagnostics,
@@ -698,43 +708,124 @@ impl<'db> Resolver<'db> {
     fn forbid_same_impl_trait(
         &mut self,
         diagnostics: &mut SemanticDiagnostics,
-        inner_item_info: &ModuleItemInfo,
-        identifier: &ast::TerminalIdentifier,
+        // TODO(yg): only need the item_id?
+        current_segment_info: &ModuleItemInfo,
+        current_segment_identifier: &ast::TerminalIdentifier,
+        // TODO(yg): remove the wrapping option. Call unwrap_or_default in the caller.
+        current_segment_generic_args: Option<&[ast::GenericArg]>,
     ) -> Result<(), cairo_lang_diagnostics::DiagnosticAdded> {
-        match inner_item_info.item_id {
-            cairo_lang_defs::ids::ModuleItemId::Trait(trt) => {
-                match self.trait_or_impl_ctx {
-                    TraitOrImplContext::Trait(TraitContext { trait_id: trait_ctx }) => {
-                        // TODO(yuval): Also check generic args.
-                        if trt == trait_ctx {
-                            return Err(
-                                diagnostics.report(identifier, TraitTypeForbiddenInTheTrait)
-                            );
+        match current_segment_info.item_id {
+            cairo_lang_defs::ids::ModuleItemId::Trait(current_segment_trait_id) => {
+                // TODO(yg): can I avoid the clone?
+                let trait_or_impl_ctx = self.trait_or_impl_ctx.clone();
+                match trait_or_impl_ctx {
+                    TraitOrImplContext::Trait(TraitContext {
+                        trait_id: ctx_trait,
+                        generic_parameters: ctx_trait_generic_params,
+                    }) => {
+                        if current_segment_trait_id == ctx_trait
+                            && self.get_has_same_args(
+                                diagnostics,
+                                &ctx_trait_generic_params,
+                                current_segment_generic_args,
+                            )?
+                        {
+                            return Err(diagnostics
+                                .report(current_segment_identifier, TraitTypeForbiddenInTheTrait));
                         }
                     }
-                    TraitOrImplContext::Impl(ImplContext { impl_def_id }) => {
-                        let impl_ctx_trait = self.db.impl_def_trait(impl_def_id)?;
-                        // TODO(yuval): Also check generic args.
-                        if trt == impl_ctx_trait {
-                            return Err(diagnostics.report(identifier, TraitTypeForbiddenInItsImpl));
+                    TraitOrImplContext::Impl(ImplContext {
+                        impl_def_id: ctx_impl_def_id, ..
+                    }) => {
+                        let ctx_impl_trait = self.db.impl_def_trait(ctx_impl_def_id)?;
+                        let ctx_impl_trait_generic_params =
+                            self.db.trait_generic_params(ctx_impl_trait)?;
+                        let current_segment_generic_args = self.resolve_generic_args(
+                            diagnostics,
+                            &ctx_impl_trait_generic_params,
+                            // TODO(yG): don't unwrap. don't create a new vec.
+                            current_segment_generic_args.unwrap_or_default().into(),
+                            // TODO(yg): is this the right stable ptr?
+                            current_segment_identifier.stable_ptr().untyped(),
+                        )?;
+                        // let current_segment_generic_args = self.get_arg_syntax_for_param(
+                        //     diagnostics,
+                        //     &ctx_impl_trait_generic_params,
+                        //     // TODO(yG): don't unwrap.
+                        //     current_segment_generic_args.unwrap(),
+                        // )?;
+
+                        let ctx_impl_concrete_trait =
+                            self.db.impl_def_concrete_trait(ctx_impl_def_id)?;
+                        let ctx_impl_concrete_trait_generic_args =
+                            ctx_impl_concrete_trait.generic_args(self.db);
+
+                        // let current_segment_generic_args_ordered = ctx_impl_trait_generic_params
+                        //     .iter()
+                        //     // TODO(yg): don't unwrap.
+                        //     .map(|p| current_segment_generic_args.get(&p.id()).unwrap())
+                        //     .collect_vec();
+
+                        // TODO(yg): can I just compare the vectors?
+                        let has_same_args = ctx_impl_concrete_trait_generic_args
+                            .into_iter()
+                            .zip_eq(current_segment_generic_args)
+                            .all(
+                                |(
+                                    ctx_impl_concrete_trait_generic_arg,
+                                    current_segment_generic_arg,
+                                )| {
+                                    ctx_impl_concrete_trait_generic_arg
+                                        == current_segment_generic_arg
+                                },
+                            );
+                        if current_segment_trait_id == ctx_impl_trait && has_same_args {
+                            return Err(diagnostics
+                                .report(current_segment_identifier, TraitTypeForbiddenInItsImpl));
                         }
                     }
                     TraitOrImplContext::None => {}
                 }
             }
             cairo_lang_defs::ids::ModuleItemId::Impl(impl_def) => {
-                if let TraitOrImplContext::Impl(ImplContext { impl_def_id: impl_def_ctx }) =
-                    self.trait_or_impl_ctx
+                // TODO(yg): generics
+                if let TraitOrImplContext::Impl(ImplContext {
+                    impl_def_id: impl_def_ctx,
+                    generic_parameters,
+                }) = &self.trait_or_impl_ctx
                 {
-                    if impl_def == impl_def_ctx {
+                    if impl_def == *impl_def_ctx {
                         // TODO(yuval): check generic args.
-                        return Err(diagnostics.report(identifier, ImplTypeForbiddenInTheImpl));
+                        return Err(diagnostics
+                            .report(current_segment_identifier, ImplTypeForbiddenInTheImpl));
                     }
                 }
             }
             _ => {}
         };
         Ok(())
+    }
+
+    // TODO(ygr)
+    fn get_has_same_args(
+        &self,
+        diagnostics: &mut SemanticDiagnostics,
+        generic_parameters: &Vec<GenericParam>,
+        // TODO(yg): remove the wrapping option. Call unwrap_or_default in the caller.
+        generic_args_syntax: Option<&[ast::GenericArg]>,
+    ) -> Result<bool, cairo_lang_diagnostics::DiagnosticAdded> {
+        let arg_syntax_for_param = self.get_arg_syntax_for_param(
+            diagnostics,
+            generic_parameters,
+            generic_args_syntax.unwrap_or_default(),
+        )?;
+        let has_same_gargs = arg_syntax_for_param
+            // TODO(yg): add .all()/.any() to unordered hash map.
+            .iter_sorted_by_key(|_| 0)
+            .all(|(gparam, garg)| {garg.as_syntax_node().get_text(self.db.upcast()) ==
+                // TODO(yg): don't unwrap, handle unspecified params.
+                gparam.name(self.db.upcast()).unwrap()});
+        Ok(has_same_gargs)
     }
 
     /// Specializes a ResolvedGenericItem that came from a ModuleItem.
@@ -1015,12 +1106,48 @@ impl<'db> Resolver<'db> {
         &mut self,
         diagnostics: &mut SemanticDiagnostics,
         generic_params: &[GenericParam],
+        // TODO(yg): separate pr: try changing this to &[].
         generic_args_syntax: Vec<ast::GenericArg>,
         stable_ptr: SyntaxStablePtrId,
     ) -> Maybe<Vec<GenericArgumentId>> {
-        let syntax_db = self.db.upcast();
         let mut substitution = GenericSubstitution::default();
         let mut resolved_args = vec![];
+        let arg_syntax_for_param =
+            self.get_arg_syntax_for_param(diagnostics, generic_params, &generic_args_syntax)?;
+
+        for generic_param in generic_params.iter() {
+            let generic_param = SubstitutionRewriter { db: self.db, substitution: &substitution }
+                .rewrite(*generic_param)?;
+            let generic_arg = self.resolve_generic_arg(
+                generic_param,
+                arg_syntax_for_param
+                    .get(&generic_param.id())
+                    .and_then(|arg_syntax| {
+                        if let ast::GenericArgValue::Expr(expr) = arg_syntax {
+                            Some(expr.expr(self.db.upcast()))
+                        } else {
+                            None
+                        }
+                    })
+                    .as_ref(),
+                stable_ptr,
+                diagnostics,
+            )?;
+            resolved_args.push(generic_arg);
+            substitution.0.insert(generic_param.id(), generic_arg);
+        }
+
+        Ok(resolved_args)
+    }
+
+    // TODO(ygd)
+    fn get_arg_syntax_for_param(
+        &self,
+        diagnostics: &mut SemanticDiagnostics,
+        generic_params: &[GenericParam],
+        generic_args_syntax: &[ast::GenericArg],
+    ) -> Maybe<UnorderedHashMap<GenericParamId, ast::GenericArgValue>> {
+        let syntax_db = self.db.upcast();
         let mut arg_syntax_for_param =
             UnorderedHashMap::<GenericParamId, ast::GenericArgValue>::default();
         let mut last_named_arg_index = None;
@@ -1029,8 +1156,7 @@ impl<'db> Resolver<'db> {
             .enumerate()
             .filter_map(|(i, param)| Some((param.id().name(self.db.upcast())?, (i, param.id()))))
             .collect::<UnorderedHashMap<_, _>>();
-
-        for (i, generic_arg_syntax) in generic_args_syntax.iter().enumerate() {
+        for (idx, generic_arg_syntax) in generic_args_syntax.iter().enumerate() {
             match generic_arg_syntax {
                 ast::GenericArg::Named(arg_syntax) => {
                     let name = arg_syntax.name(syntax_db).text(syntax_db);
@@ -1056,7 +1182,7 @@ impl<'db> Resolver<'db> {
                     if last_named_arg_index.is_some() {
                         return Err(diagnostics.report(arg_syntax, PositionalGenericAfterNamed));
                     }
-                    let generic_param = generic_params.get(i).ok_or_else(|| {
+                    let generic_param = generic_params.get(idx).ok_or_else(|| {
                         diagnostics.report(
                             arg_syntax,
                             TooManyGenericArguments {
@@ -1074,30 +1200,7 @@ impl<'db> Resolver<'db> {
                 }
             }
         }
-
-        for generic_param in generic_params.iter() {
-            let generic_param = SubstitutionRewriter { db: self.db, substitution: &substitution }
-                .rewrite(*generic_param)?;
-            let generic_arg = self.resolve_generic_arg(
-                generic_param,
-                arg_syntax_for_param
-                    .get(&generic_param.id())
-                    .and_then(|arg_syntax| {
-                        if let ast::GenericArgValue::Expr(expr) = arg_syntax {
-                            Some(expr.expr(syntax_db))
-                        } else {
-                            None
-                        }
-                    })
-                    .as_ref(),
-                stable_ptr,
-                diagnostics,
-            )?;
-            resolved_args.push(generic_arg);
-            substitution.0.insert(generic_param.id(), generic_arg);
-        }
-
-        Ok(resolved_args)
+        Ok(arg_syntax_for_param)
     }
 
     fn resolve_generic_arg(
@@ -1228,7 +1331,7 @@ fn resolve_self_segment(
     db: &dyn SemanticGroup,
     diagnostics: &mut SemanticDiagnostics,
     identifier: &ast::TerminalIdentifier,
-    trait_or_impl_ctx: TraitOrImplContext,
+    trait_or_impl_ctx: &TraitOrImplContext,
 ) -> Option<Maybe<ResolvedConcreteItem>> {
     if identifier.text(db.upcast()) != "Self" {
         return None;
@@ -1236,18 +1339,56 @@ fn resolve_self_segment(
 
     Some(match trait_or_impl_ctx {
         TraitOrImplContext::None => Err(diagnostics.report(identifier, SelfNotSupportedInContext)),
-        TraitOrImplContext::Trait(TraitContext { trait_id }) => {
-            // TODO(yuval): use generics
-            let concrete_trait_id =
-                db.intern_concrete_trait(ConcreteTraitLongId { trait_id, generic_args: vec![] });
+        TraitOrImplContext::Trait(TraitContext { trait_id, generic_parameters }) => {
+            let concrete_trait_id = db.intern_concrete_trait(ConcreteTraitLongId {
+                trait_id: *trait_id,
+                // TODO(yg): extract to a function.
+                generic_args: generic_parameters
+                    .into_iter()
+                    .map(|p| match p {
+                        GenericParam::Type(_) => GenericArgumentId::Type(
+                            db.intern_type(TypeLongId::GenericParameter(p.id())),
+                        ),
+                        GenericParam::Const(_) => GenericArgumentId::Constant(
+                            db.intern_const_value(ConstValue::Generic(p.id())),
+                        ),
+                        GenericParam::Impl(_) => {
+                            GenericArgumentId::Impl(ImplId::GenericParameter(p.id()))
+                        }
+                        GenericParam::NegImpl(_) => {
+                            todo!();
+                            // panic!("Negative impls are not allowed in trait generics.")
+                        }
+                    })
+                    .collect(),
+            });
             Ok(ResolvedConcreteItem::Trait(concrete_trait_id))
         }
-        TraitOrImplContext::Impl(ImplContext { impl_def_id }) => {
-            let impl_id =
-                ImplId::Concrete(db.intern_concrete_impl(ConcreteImplLongId {
-                    impl_def_id,
-                    generic_args: vec![],
-                }));
+        TraitOrImplContext::Impl(ImplContext { impl_def_id, generic_parameters }) => {
+            let impl_id = ImplId::Concrete(
+                db.intern_concrete_impl(ConcreteImplLongId {
+                    impl_def_id: *impl_def_id,
+                    // TODO(yg): extract to a function.
+                    generic_args: generic_parameters
+                        .into_iter()
+                        .map(|p| match p {
+                            GenericParam::Type(_) => GenericArgumentId::Type(
+                                db.intern_type(TypeLongId::GenericParameter(p.id())),
+                            ),
+                            GenericParam::Const(_) => GenericArgumentId::Constant(
+                                db.intern_const_value(ConstValue::Generic(p.id())),
+                            ),
+                            GenericParam::Impl(_) => {
+                                GenericArgumentId::Impl(ImplId::GenericParameter(p.id()))
+                            }
+                            GenericParam::NegImpl(_) => {
+                                todo!();
+                                // panic!("Negative impls are not allowed in trait generics.")
+                            }
+                        })
+                        .collect(),
+                }),
+            );
             Ok(ResolvedConcreteItem::Impl(impl_id))
         }
     })

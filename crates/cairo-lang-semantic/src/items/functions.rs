@@ -4,9 +4,9 @@ use std::sync::Arc;
 use cairo_lang_debug::DebugWithDb;
 use cairo_lang_defs::diagnostic_utils::StableLocation;
 use cairo_lang_defs::ids::{
-    ExternFunctionId, FreeFunctionId, FunctionTitleId, FunctionWithBodyId, ImplContext,
-    ImplFunctionId, LanguageElementId, ModuleFileId, ModuleItemId, NamedLanguageElementId,
-    ParamLongId, TopLevelLanguageElementId, TraitFunctionId,
+    ExternFunctionId, FreeFunctionId, FunctionTitleId, FunctionWithBodyId, ImplFunctionId,
+    LanguageElementId, ModuleFileId, ModuleItemId, NamedLanguageElementId, ParamLongId,
+    TopLevelLanguageElementId, TraitFunctionId,
 };
 use cairo_lang_diagnostics::{skip_diagnostic, Diagnostics, Maybe};
 use cairo_lang_filesystem::ids::UnstableSalsaId;
@@ -21,9 +21,10 @@ use syntax::attribute::consts::{MUST_USE_ATTR, UNSTABLE_ATTR};
 
 use super::attribute::SemanticQueryAttrs;
 use super::constant::ConstValue;
+use super::generics::GenericParamType;
 use super::imp::ImplId;
-use super::modifiers;
 use super::trt::ConcreteTraitGenericFunctionId;
+use super::{modifiers, ImplContext};
 use crate::corelib::unit_ty;
 use crate::db::SemanticGroup;
 use crate::diagnostic::{SemanticDiagnosticKind, SemanticDiagnostics};
@@ -772,6 +773,22 @@ pub fn concrete_function_implized_signature(
     let mut signature = db.concrete_function_signature(function_id)?;
     let generic_function = function_id.lookup(db).function.generic_function;
 
+    // // If the generic impl of the impl function is not concrete, nothing to implize.
+    // let Some(concrete_impl_id) =
+    //     try_extract_matches!(impl_generic_function.impl_id, ImplId::Concrete)
+    // else {
+    //     return Ok(signature);
+    // };
+    // let concrete_impl_long = db.lookup_intern_concrete_impl(concrete_impl_id);
+    // let impl_def_id = concrete_impl_long.impl_def_id;
+    // let generic_parameters =
+    //     concrete_impl_long.generic_args.map(|garg| GenericParam::Type(GenericParamType {id: }
+    // )).collect();
+
+    // // let impl_def_id = impl_function.impl_def_id(db.upcast());
+    // // TODO(yg): generics
+    // let impl_ctx = ImplContext { impl_def_id, generic_parameters: todo!() };
+
     // If the generic function is not an impl function, nothing to implize.
     let crate::items::functions::GenericFunctionId::Impl(impl_generic_function) = generic_function
     else {
@@ -784,7 +801,8 @@ pub fn concrete_function_implized_signature(
     };
 
     let impl_def_id = impl_function.impl_def_id(db.upcast());
-    let impl_ctx = ImplContext { impl_def_id };
+    // TODO(yg): generics?
+    let impl_ctx = ImplContext { impl_def_id, generic_parameters: vec![] };
 
     let mut tmp_inference_data = impl_def_id.resolver_data(db)?.inference_data.temporary_clone();
     let mut tmp_inference = tmp_inference_data.inference(db);
@@ -803,7 +821,7 @@ fn implize_signature(
     impl_ctx: ImplContext,
 ) -> Maybe<()> {
     for param in signature.params.iter_mut() {
-        param.ty = implize_type(db, param.ty, Some(impl_ctx), tmp_inference)?;
+        param.ty = implize_type(db, param.ty, Some(impl_ctx.clone()), tmp_inference)?;
     }
     signature.return_type = implize_type(db, signature.return_type, Some(impl_ctx), tmp_inference)?;
 

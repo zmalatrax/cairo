@@ -1,6 +1,6 @@
 use cairo_lang_debug::DebugWithDb;
 use cairo_lang_defs::ids::{
-    EnumId, ExternTypeId, GenericParamId, GenericTypeId, ImplContext, ImplTypeDefId, ModuleFileId,
+    EnumId, ExternTypeId, GenericParamId, GenericTypeId, ImplTypeDefId, ModuleFileId,
     NamedLanguageElementId, StructId, TraitTypeId,
 };
 use cairo_lang_diagnostics::{DiagnosticAdded, Maybe};
@@ -28,6 +28,7 @@ use crate::expr::inference::{Inference, InferenceData, InferenceError, Inference
 use crate::items::attribute::SemanticQueryAttrs;
 use crate::items::constant::{resolve_const_expr_and_evaluate, ConstValue, ConstValueId};
 use crate::items::imp::{ImplId, ImplLookupContext};
+use crate::items::ImplContext;
 use crate::resolve::{ResolvedConcreteItem, Resolver};
 use crate::substitution::SemanticRewriter;
 use crate::{semantic, semantic_object_for_id, ConcreteTraitId, FunctionId, GenericArgumentId};
@@ -182,6 +183,7 @@ impl DebugWithDb<dyn SemanticGroup> for TypeLongId {
 pub fn implize_type(
     db: &dyn SemanticGroup,
     type_to_reduce: TypeId,
+    // TODO(yg): consider getting a Option<&ImplContext> instead of cloning in the callers.
     impl_ctx: Option<ImplContext>,
     inference: &mut Inference<'_>,
 ) -> Maybe<TypeId> {
@@ -204,6 +206,8 @@ pub fn implize_type(
 fn implize_type_recursive(
     db: &dyn SemanticGroup,
     type_to_reduce: TypeId,
+    // TODO(yg): consider getting a Option<&ImplContext> instead of cloning in the callers
+    // (itself).
     impl_ctx: Option<ImplContext>,
     inference: &mut Inference<'_>,
 ) -> Maybe<TypeId> {
@@ -220,24 +224,26 @@ fn implize_type_recursive(
                     continue;
                 };
                 *generic_arg_type =
-                    implize_type_recursive(db, *generic_arg_type, impl_ctx, inference)?;
+                    implize_type_recursive(db, *generic_arg_type, impl_ctx.clone(), inference)?;
                 *generic_arg = GenericArgumentId::Type(*generic_arg_type);
             }
             concrete_type.modify_generic_args(db, generic_args);
         }
         TypeLongId::Tuple(types) => {
             for ty in types.iter_mut() {
-                *ty = implize_type_recursive(db, *ty, impl_ctx, inference)?;
+                *ty = implize_type_recursive(db, *ty, impl_ctx.clone(), inference)?;
             }
         }
-        TypeLongId::Snapshot(ty) => *ty = implize_type_recursive(db, *ty, impl_ctx, inference)?,
+        TypeLongId::Snapshot(ty) => {
+            *ty = implize_type_recursive(db, *ty, impl_ctx.clone(), inference)?
+        }
         TypeLongId::GenericParameter(_)
         | TypeLongId::Var(_)
         | TypeLongId::ImplType(_)
         | TypeLongId::Coupon(_)
         | TypeLongId::Missing(_) => {}
         TypeLongId::FixedSizeArray { type_id, .. } => {
-            *type_id = implize_type_recursive(db, *type_id, impl_ctx, inference)?
+            *type_id = implize_type_recursive(db, *type_id, impl_ctx.clone(), inference)?
         }
     }
     let type_to_reduce = db.intern_type(long_ty);
@@ -258,7 +264,8 @@ fn implize_type_recursive(
     }
 
     // Try to implize by the impl context, if given. E.g. for `Self::MyType` inside an impl.
-    if let Some(ImplContext { impl_def_id }) = impl_ctx {
+    // TODO(yg): generics
+    if let Some(ImplContext { impl_def_id, generic_parameters }) = impl_ctx {
         if let Some(ty) = db.impl_type_implized_by_context(impl_type_id, impl_def_id)? {
             return Ok(ty);
         }
