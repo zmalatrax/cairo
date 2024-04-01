@@ -41,7 +41,7 @@ fn with_err() -> Option::<felt252> {
 }
 
 //! > expected_diagnostics
-error: Return type "core::felt252" does not wrap error "()"
+error: Logical operator not allowed in while-let.
  --> lib.cairo:5:5
     with_err()?;
     ^*********^
@@ -95,7 +95,7 @@ fn with_err() -> Result::<felt252, u128> {
 }
 
 //! > expected_diagnostics
-error: Return type "core::felt252" does not wrap error "core::integer::u128"
+error: Logical operator not allowed in while-let.
  --> lib.cairo:5:5
     with_err()?;
     ^*********^
@@ -127,6 +127,11 @@ error: Return type "core::result::Result::<core::felt252, core::integer::u128>" 
     with_other_err()?;
     ^***************^
 
+error: Unexpected argument type. Expected: "core::result::Result::<core::felt252, core::integer::u128>", found: "core::result::Result::<core::felt252, core::felt252>".
+ --> lib.cairo:4:37
+fn foo() -> Result::<felt252, u128> {
+                                    ^
+
 error: Unexpected return type. Expected: "core::result::Result::<core::felt252, core::integer::u128>", found: "core::result::Result::<core::felt252, core::felt252>".
  --> lib.cairo:4:37
 fn foo() -> Result::<felt252, u128> {
@@ -151,7 +156,7 @@ foo
 //! > module_code
 
 //! > expected_diagnostics
-error: Type "?0" can not error propagate
+error: Logical operator not allowed in while-let.
  --> lib.cairo:2:5
     6?;
     ^^

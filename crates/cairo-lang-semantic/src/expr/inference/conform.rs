@@ -75,6 +75,11 @@ impl<'db> InferenceConform for Inference<'db> {
         ty1: TypeId,
         ty0_is_self: bool,
     ) -> InferenceResult<(TypeId, usize)> {
+        // println!(
+        //     "yg conform_ty_ex 1, ty0: {:?}, ty1: {:?}",
+        //     ty0.debug(self.db.elongate()),
+        //     ty1.debug(self.db.elongate())
+        // );
         let ty0 = self.rewrite(ty0).no_err();
         let ty1 = self.rewrite(ty1).no_err();
         if ty0 == never_ty(self.db) || ty0.is_missing(self.db) {
@@ -83,6 +88,7 @@ impl<'db> InferenceConform for Inference<'db> {
         if ty0 == ty1 {
             return Ok((ty0, 0));
         }
+        // println!("yg conform_ty_ex 2");
         let long_ty1 = self.db.lookup_intern_type(ty1);
         match long_ty1 {
             TypeLongId::Var(var) => return Ok((self.assign_ty(var, ty0)?, 0)),
@@ -101,26 +107,38 @@ impl<'db> InferenceConform for Inference<'db> {
             }
             _ => {}
         }
+        // println!("yg conform_ty_ex 3");
         let n_snapshots = 0;
         let long_ty0 = self.db.lookup_intern_type(ty0);
 
-        match long_ty0 {
+        let aaa = match long_ty0 {
             TypeLongId::Concrete(concrete0) => {
+                // println!("yg conform_ty_ex 4");
                 let (n_snapshots, long_ty1) = self.maybe_peel_snapshots(ty0_is_self, ty1);
                 let TypeLongId::Concrete(concrete1) = long_ty1 else {
+                    // println!(
+                    //     "yg ty0 concrete but ty1 is not, ty0: {:?}, ty1: {:?}, long_ty1: {:?}",
+                    //     ty0.debug(self.db.elongate()),
+                    //     ty1.debug(self.db.elongate()),
+                    //     long_ty1
+                    // );
                     return Err(self.set_error(InferenceError::TypeKindMismatch { ty0, ty1 }));
                 };
+                // println!("yg conform_ty_ex 4.1");
                 if concrete0.generic_type(self.db) != concrete1.generic_type(self.db) {
                     return Err(self.set_error(InferenceError::TypeKindMismatch { ty0, ty1 }));
                 }
+                // println!("yg conform_ty_ex 4.2");
                 let gargs0 = concrete0.generic_args(self.db);
                 let gargs1 = concrete1.generic_args(self.db);
+                // println!("yg conform_ty_ex 4.3");
                 let gargs = self.conform_generic_args(&gargs0, &gargs1)?;
                 let long_ty = TypeLongId::Concrete(ConcreteTypeId::new(
                     self.db,
                     concrete0.generic_type(self.db),
                     gargs,
                 ));
+                // println!("yg conform_ty_ex 4.4");
                 Ok((self.db.intern_type(long_ty), n_snapshots))
             }
             TypeLongId::Tuple(tys0) => {
@@ -187,7 +205,9 @@ impl<'db> InferenceConform for Inference<'db> {
                     n_snapshots,
                 ))
             }
-        }
+        };
+        // println!("yg conform_ty_ex 5");
+        aaa
     }
 
     /// Conforms id0 to id1. Should be called when id0 should be coerced to id1. Not symmetric.

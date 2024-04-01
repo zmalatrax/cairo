@@ -300,6 +300,13 @@ impl DiagnosticEntry for SemanticDiagnostic {
                     actual_ty.format(db)
                 )
             }
+            SemanticDiagnosticKind::WrongExprType { expected_ty, actual_ty } => {
+                format!(
+                    r#"Unexpected expression type. Expected: "{}", found: "{}"."#,
+                    expected_ty.format(db),
+                    actual_ty.format(db)
+                )
+            }
             SemanticDiagnosticKind::WrongNumberOfGenericParamsForImplFunction {
                 expected,
                 actual,
@@ -895,6 +902,10 @@ pub enum SemanticDiagnosticKind {
         actual_ty: semantic::TypeId,
     },
     WrongReturnType {
+        expected_ty: semantic::TypeId,
+        actual_ty: semantic::TypeId,
+    },
+    WrongExprType {
         expected_ty: semantic::TypeId,
         actual_ty: semantic::TypeId,
     },

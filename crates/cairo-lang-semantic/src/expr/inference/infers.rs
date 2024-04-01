@@ -58,6 +58,7 @@ pub trait InferenceEmbeddings {
         trait_function: TraitFunctionId,
         self_ty: TypeId,
         lookup_context: &ImplLookupContext,
+        result_type: Option<(TypeId, SyntaxStablePtrId)>,
         stable_ptr: Option<SyntaxStablePtrId>,
         inference_error_cb: impl FnOnce(InferenceError),
     ) -> Option<(ConcreteTraitId, usize)>;
@@ -255,6 +256,7 @@ impl<'db> InferenceEmbeddings for Inference<'db> {
         trait_function: TraitFunctionId,
         self_ty: TypeId,
         lookup_context: &ImplLookupContext,
+        result_type: Option<(TypeId, SyntaxStablePtrId)>,
         stable_ptr: Option<SyntaxStablePtrId>,
         inference_error_cb: impl FnOnce(InferenceError),
     ) -> Option<(ConcreteTraitId, usize)> {
@@ -264,9 +266,10 @@ impl<'db> InferenceEmbeddings for Inference<'db> {
         if first_param.name != "self" {
             return None;
         }
-        let generic_params = self.db.trait_generic_params(trait_id).ok()?;
-        let generic_args =
-            match self.infer_generic_args(&generic_params, lookup_context, stable_ptr) {
+
+        let trait_generic_params = self.db.trait_generic_params(trait_id).ok()?;
+        let trait_generic_args =
+            match self.infer_generic_args(&trait_generic_params, lookup_context, stable_ptr) {
                 Ok(generic_args) => generic_args,
                 Err(err_set) => {
                     if let Some(err) = self.consume_error_without_reporting(err_set) {
@@ -275,7 +278,40 @@ impl<'db> InferenceEmbeddings for Inference<'db> {
                     return None;
                 }
             };
-        let substitution = GenericSubstitution::new(&generic_params, &generic_args);
+        // println!(
+        //     "yg1 #trait params: {}, #trait args: {}",
+        //     trait_generic_params.len(),
+        //     trait_generic_args.len()
+        // );
+
+        // TODO(yuval): Try to not temporary clone.
+        let mut tmp_inference_data = self.temporary_clone();
+        let mut tmp_inference = tmp_inference_data.inference(self.db);
+        let function_generic_params =
+            tmp_inference.db.trait_function_generic_params(trait_function).ok()?;
+        let function_generic_args =
+            // TODO(yuval): consider getting the substitution from inside `infer_generic_args`
+            // instead of creating it again here.
+            match tmp_inference.infer_generic_args(&function_generic_params, lookup_context, stable_ptr) {
+                Ok(generic_args) => generic_args,
+                Err(err_set) => {
+                    if let Some(err) = self.consume_error_without_reporting(err_set) {
+                        inference_error_cb(err);
+                    }
+                    return None;
+                }
+            };
+        // println!(
+        //     "yg1 #function params: {}, #function args: {}",
+        //     function_generic_params.len(),
+        //     function_generic_args.len()
+        // );
+
+        let trait_substitution =
+            GenericSubstitution::new(&trait_generic_params, &trait_generic_args);
+        let function_substitution =
+            GenericSubstitution::new(&function_generic_params, &function_generic_args);
+        let substitution = trait_substitution.concat(function_substitution);
         let mut rewriter = SubstitutionRewriter { db: self.db, substitution: &substitution };
 
         let fixed_param_ty = rewriter.rewrite(first_param.ty).ok()?;
@@ -288,7 +324,29 @@ impl<'db> InferenceEmbeddings for Inference<'db> {
                 return None;
             }
         };
-        let generic_args = self.rewrite(generic_args).no_err();
+
+        let generic_args = self.rewrite(trait_generic_args).no_err();
+        if let Some((result_type, _)) = result_type {
+            // println!(
+            //     "yg conforming1 (infer_concrete_trait_by_self) {:?} to {:?}",
+            //     signature.return_type.debug(self.db.elongate()),
+            //     result_type.debug(self.db.elongate())
+            // );
+            let return_type = rewriter.rewrite(signature.return_type).ok()?;
+            let return_type = self.rewrite(return_type).no_err();
+            let result_type = self.rewrite(result_type).no_err();
+            // println!(
+            //     "yg conforming2 (infer_concrete_trait_by_self) {:?} to {:?}",
+            //     return_type.debug(self.db.elongate()),
+            //     result_type.debug(self.db.elongate())
+            // );
+            if let Err(err_set) = self.conform_ty(return_type, result_type) {
+                if let Some(err) = self.consume_error_without_reporting(err_set) {
+                    inference_error_cb(err);
+                }
+                return None;
+            }
+        }
 
         Some((
             self.db.intern_concrete_trait(ConcreteTraitLongId { trait_id, generic_args }),

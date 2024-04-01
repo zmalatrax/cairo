@@ -301,7 +301,8 @@ pub struct InferenceData {
 
     // Error handling members.
     /// The current error status.
-    error_status: Result<(), InferenceErrorStatus>,
+    // TODO(yg2): remove pub?
+    pub error_status: Result<(), InferenceErrorStatus>,
     /// `Some` only when error_state is Err(Pending).
     error: Option<InferenceError>,
     /// `Some` only when error_state is Err(Consumed).
@@ -438,7 +439,10 @@ impl<'db> Inference<'db> {
     /// Returns a wrapping TypeId.
     pub fn new_type_var(&mut self, stable_ptr: Option<SyntaxStablePtrId>) -> TypeId {
         let var = self.new_type_var_raw(stable_ptr);
-        self.db.intern_type(TypeLongId::Var(var))
+
+        let x = self.db.intern_type(TypeLongId::Var(var));
+        // println!("yg new type var: {:?}", x.debug(self.db.elongate()));
+        x
     }
 
     /// Allocates a new [TypeVar] for an unknown type that needs to be inferred.
