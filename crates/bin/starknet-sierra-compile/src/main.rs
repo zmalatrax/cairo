@@ -42,11 +42,15 @@ pub struct ContractClassIgnoreAbi {
     pub _abi: Option<serde_json::Value>,
 }
 
-fn main() -> anyhow::Result<()> {
-    let args = Args::parse();
-    let list_selector =
-        ListSelector::new(args.allowed_libfuncs_list_name, args.allowed_libfuncs_list_file)
-            .expect("Both allowed libfunc list name and file were supplied.");
+pub fn starknet_sierra_compile(
+    allowed_libfuncs_list_name: Option<String>,
+    allowed_libfuncs_list_file: Option<String>,
+    file: String,
+    add_pythonic_hints: bool,
+    max_bytecode_size: usize,
+) -> anyhow::Result<String> {
+    let list_selector = ListSelector::new(allowed_libfuncs_list_name, allowed_libfuncs_list_file)
+        .expect("Both allowed libfunc list name and file were supplied.");
     let ContractClassIgnoreAbi {
         sierra_program,
         sierra_program_debug_info,
@@ -54,8 +58,7 @@ fn main() -> anyhow::Result<()> {
         entry_points_by_type,
         _abi,
     } = serde_json::from_str(
-        &fs::read_to_string(&args.file)
-            .with_context(|| format!("Failed to read {}.", &args.file))?,
+        &fs::read_to_string(&file).with_context(|| format!("Failed to read {}.", &file))?,
     )
     .with_context(|| "deserialization Failed.")?;
     let contract_class = ContractClass {
@@ -66,15 +69,27 @@ fn main() -> anyhow::Result<()> {
         abi: None,
     };
     contract_class.validate_version_compatible(list_selector)?;
+
     let casm_contract = CasmContractClass::from_contract_class(
         contract_class,
-        args.add_pythonic_hints,
-        args.max_bytecode_size,
+        add_pythonic_hints,
+        max_bytecode_size,
     )
     .with_context(|| "Compilation failed.")?;
 
-    let res = serde_json::to_string_pretty(&casm_contract)
-        .with_context(|| "Casm contract Serialization failed.")?;
+    serde_json::to_string_pretty(&casm_contract)
+        .with_context(|| "Casm contract Serialization failed.")
+}
+
+fn main() -> anyhow::Result<()> {
+    let args = Args::parse();
+    let res = starknet_sierra_compile(
+        args.allowed_libfuncs_list_name,
+        args.allowed_libfuncs_list_file,
+        args.file,
+        args.add_pythonic_hints,
+        args.max_bytecode_size,
+    )?;
 
     match args.output {
         Some(path) => fs::write(path, res).with_context(|| "Failed to write casm contract.")?,
