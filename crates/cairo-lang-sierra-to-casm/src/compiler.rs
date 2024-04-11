@@ -16,6 +16,7 @@ use cairo_lang_utils::ordered_hash_set::OrderedHashSet;
 use itertools::{chain, zip_eq};
 use num_bigint::BigInt;
 use thiserror::Error;
+use serde::{Serialize, Deserialize};
 
 use crate::annotations::{AnnotationError, ProgramAnnotations, StatementAnnotations};
 use crate::invocations::{
@@ -59,7 +60,7 @@ pub enum CompilationError {
 }
 
 /// The casm program representation.
-#[derive(Debug, Eq, PartialEq, Clone)]
+#[derive(Debug, Eq, PartialEq, Clone, Serialize, Deserialize)]
 pub struct CairoProgram {
     pub instructions: Vec<Instruction>,
     pub debug_info: CairoProgramDebugInfo,
@@ -140,7 +141,7 @@ impl CairoProgram {
 }
 
 /// The debug information of a compilation from Sierra to casm.
-#[derive(Debug, Eq, PartialEq, Copy, Clone)]
+#[derive(Debug, Eq, PartialEq, Clone, Serialize, Deserialize)]
 pub struct SierraStatementDebugInfo {
     /// The offset of the sierra statement within the bytecode.
     pub code_offset: usize,
@@ -149,7 +150,7 @@ pub struct SierraStatementDebugInfo {
 }
 
 /// The debug information of a compilation from Sierra to casm.
-#[derive(Debug, Eq, PartialEq, Clone)]
+#[derive(Debug, Eq, PartialEq, Clone, Serialize, Deserialize)]
 pub struct CairoProgramDebugInfo {
     /// The debug information per Sierra statement.
     pub sierra_statement_info: Vec<SierraStatementDebugInfo>,
@@ -186,7 +187,7 @@ impl ConstSegmentInfoBuilder {
 }
 
 /// The data of a single const in the const segment.
-#[derive(Debug, Eq, PartialEq, Default, Clone)]
+#[derive(Debug, Eq, PartialEq, Clone, Serialize, Deserialize)]
 pub struct ConstAllocation {
     /// The offset of the const within the constants segment.
     pub offset: CodeOffset,
@@ -195,7 +196,7 @@ pub struct ConstAllocation {
 }
 
 /// The information about the constants used in the program.
-#[derive(Debug, Eq, PartialEq, Default, Clone)]
+#[derive(Debug, Eq, PartialEq, Clone, Serialize, Deserialize)]
 pub struct ConstSegmentInfo {
     /// A map between the const type and the data of the const.
     pub const_allocations: OrderedHashMap<ConcreteTypeId, ConstAllocation>,
