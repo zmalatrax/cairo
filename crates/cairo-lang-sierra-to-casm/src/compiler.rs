@@ -1,22 +1,27 @@
 use std::fmt::Display;
 
+use cairo_felt::Felt252;
 use cairo_lang_casm::assembler::AssembledCairoProgram;
 use cairo_lang_casm::instructions::{Instruction, InstructionBody, RetInstruction};
+use cairo_lang_casm::hints::{Hint, PythonicHint};
 use cairo_lang_sierra::extensions::core::{CoreConcreteLibfunc, CoreLibfunc, CoreType};
 use cairo_lang_sierra::extensions::lib_func::SierraApChange;
 use cairo_lang_sierra::extensions::ConcreteLibfunc;
 use cairo_lang_sierra::ids::{ConcreteTypeId, VarId};
 use cairo_lang_sierra::program::{
-    BranchTarget, GenericArg, Invocation, Program, Statement, StatementIdx,
+    BranchTarget, GenericArg, Invocation, Program, Statement, StatementIdx, Function,
 };
 use cairo_lang_sierra::program_registry::{ProgramRegistry, ProgramRegistryError};
 use cairo_lang_sierra_type_size::get_type_size_map;
 use cairo_lang_utils::ordered_hash_map::OrderedHashMap;
 use cairo_lang_utils::ordered_hash_set::OrderedHashSet;
-use itertools::{chain, zip_eq};
-use num_bigint::BigInt;
-use thiserror::Error;
+use cairo_lang_utils::bigint::{serialize_big_uint, deserialize_big_uint, BigUintAsHex};
+use itertools::{chain, zip_eq, Itertools};
+use num_bigint::{BigInt, BigUint};
+use num_integer::Integer;
+use num_traits::Signed;
 use serde::{Serialize, Deserialize};
+use thiserror::Error;
 
 use crate::annotations::{AnnotationError, ProgramAnnotations, StatementAnnotations};
 use crate::invocations::{
@@ -25,10 +30,60 @@ use crate::invocations::{
 use crate::metadata::Metadata;
 use crate::references::{check_types_match, ReferencesError};
 use crate::relocations::{relocate_instructions, CodeOffset, RelocationEntry};
+use crate::compiler_version::current_compiler_version_id;
 
 #[cfg(test)]
 #[path = "compiler_test.rs"]
 mod test;
+
+#[derive(Debug, Error)]
+pub enum CasmCairoProgramError {
+    #[error("Function with suffix `{suffix}` to run not found.")]
+    MissingFunction { suffix: String },
+}
+
+#[derive(Clone, Default, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct CasmCairoProgram {
+    #[serde(serialize_with = "serialize_big_uint", deserialize_with = "deserialize_big_uint")]
+    pub prime: BigUint,
+    pub compiler_version: String,
+    pub bytecode: Vec<BigUintAsHex>,
+    pub hints: Vec<(usize, Vec<Hint>)>,
+    pub pythonic_hints: Vec<(usize, Vec<String>)>,
+    pub main_func: Vec<Function>,
+}
+
+impl CasmCairoProgram {
+    pub fn new(cairo_program: &CairoProgram, main_func: &Function) -> Self {
+        let prime = Felt252::prime();
+
+        let compiler_version = current_compiler_version_id().to_string();
+
+        let AssembledCairoProgram { bytecode, hints } = cairo_program.assemble();
+
+        let bytecode: Vec<BigUintAsHex> = bytecode
+            .iter()
+            .map(|big_int| {
+                let (_q, reminder) = big_int.magnitude().div_rem(&prime);
+                BigUintAsHex {
+                    value: if big_int.is_negative() { &prime - reminder } else { reminder },
+                }
+            })
+            .collect();
+
+        let pythonic_hints =
+            hints
+                .iter()
+                .map(|(pc, hints)| {
+                    (*pc, hints.iter().map(|hint| hint.get_pythonic_hint()).collect_vec())
+                })
+                .collect_vec();
+
+        let main_func = vec![main_func.clone()];
+
+        Self { prime, compiler_version, bytecode, hints, pythonic_hints, main_func }
+    }
+}
 
 #[derive(Error, Debug, Eq, PartialEq)]
 pub enum CompilationError {

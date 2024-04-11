@@ -9,5 +9,6 @@ pub mod invocations;
 pub mod metadata;
 pub mod references;
 pub mod relocations;
+pub mod compiler_version;
 #[cfg(any(feature = "testing", test))]
 pub mod test_utils;
