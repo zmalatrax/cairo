@@ -853,8 +853,11 @@ dependencies = [
  "indoc",
  "itertools 0.11.0",
  "num-bigint",
+ "num-integer",
  "num-traits 0.2.17",
  "pretty_assertions",
+ "serde",
+ "serde_json",
  "test-case",
  "test-log",
  "thiserror",
@@ -2820,6 +2823,20 @@ dependencies = [
  "clap",
  "indoc",
  "log",
+]
+
+[[package]]
+name = "sierra-compile-json"
+version = "2.5.4"
+dependencies = [
+ "anyhow",
+ "cairo-lang-sierra",
+ "cairo-lang-sierra-to-casm",
+ "cairo-lang-utils",
+ "clap",
+ "indoc",
+ "log",
+ "serde_json",
 ]
 
 [[package]]

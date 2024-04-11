@@ -64,7 +64,7 @@ members = [
     "crates/bin/starknet-sierra-compile",
     "crates/bin/starknet-sierra-extract-code",
     "crates/bin/starknet-sierra-upgrade-validate",
-    "tests",
+    "tests", "crates/bin/sierra-compile-json",
 ]
 exclude = ["ensure-no_std"]
 
