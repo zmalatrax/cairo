@@ -1,12 +1,14 @@
-use std::fs;
+use std::{fs, path::PathBuf};
 
 use anyhow::Context;
-use cairo_lang_sierra::ProgramParser;
 use cairo_lang_sierra_to_casm::{
-    compiler::{compile, CasmCairoProgram, SierraToCasmConfig},
-    metadata::calc_metadata,
+    compiler::{compile, SierraToCasmConfig, CasmCairoProgram},
+    metadata::calc_metadata_ap_change_only,
 };
 use clap::Parser;
+use cairo_lang_compiler::{
+    compile_prepared_db, db::RootDatabase, project::setup_project, CompilerConfig,
+};
 
 /// Compiles a Sierra file (Cairo Program) into serialized CASM.
 /// Exits with 0/1 if the compilation succeeds/fails.
@@ -28,22 +30,35 @@ struct Args {
 fn main() -> anyhow::Result<()> {
     let args = Args::parse();
 
-    let sierra_code = fs::read_to_string(args.file).with_context(|| "Could not read file!")?;
-    let Ok(sierra_program) = ProgramParser::new().parse(&sierra_code) else {
-        anyhow::bail!("Failed to parse Sierra program.")
+    let file = std::fs::read(&args.file)?;
+    let filename = PathBuf::from(&args.file);
+    let sierra_program = match serde_json::from_slice(&file) {
+        Ok(program) => program,
+        Err(_) => {
+            let compiler_config = CompilerConfig {
+                replace_ids: true,
+                ..CompilerConfig::default()
+            };
+            let mut db = RootDatabase::builder()
+                .detect_corelib()
+                .skip_auto_withdraw_gas()
+                .build()
+                .unwrap();
+            let main_crate_ids = setup_project(&mut db, &filename).unwrap();
+            let sierra_program_with_dbg =
+                compile_prepared_db(&mut db, main_crate_ids, compiler_config).unwrap();
+
+            sierra_program_with_dbg.program
+        }
     };
-
-    let sierra_to_casm_config =
-        SierraToCasmConfig { gas_usage_check: args.gas_usage_check, max_bytecode_size: usize::MAX };
-
-    let cairo_program = compile(
-        &sierra_program,
-        &calc_metadata(&sierra_program, Default::default())
-            .with_context(|| "Failed calculating Sierra variables.")?,
-        sierra_to_casm_config,
-    )
-    .with_context(|| "Compilation failed.")?;
-
+    let metadata = calc_metadata_ap_change_only(&sierra_program)
+        .map_err(|_| anyhow::anyhow!("Failed calculating Sierra variables"))?;
+    let config = SierraToCasmConfig {
+        gas_usage_check: false,
+        max_bytecode_size: usize::MAX,
+    };
+    let cairo_program =
+        compile(&sierra_program, &metadata, config)?;
     let casm_cairo_program =
         CasmCairoProgram::new(&sierra_program, &cairo_program, args.add_pythonic_hints)
             .with_context(|| "Sierra to Casm compilation failed.")?;
